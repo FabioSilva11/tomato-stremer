@@ -112,6 +112,31 @@ class _HistoryCard extends StatelessWidget {
                       height: 1.2,
                     ),
                   ),
+                  if (entry.hasProgress && entry.progress < 0.92) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Continuar de ${_formatDuration(entry.playbackPosition)}',
+                      style: const TextStyle(
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(99),
+                      child: LinearProgressIndicator(
+                        value: entry.progress,
+                        minHeight: 4,
+                        backgroundColor: AppTheme.mutedOf(
+                          context,
+                        ).withValues(alpha: 0.22),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppTheme.primary,
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -156,5 +181,11 @@ class _HistoryCard extends StatelessWidget {
     if (date == today.subtract(const Duration(days: 1))) return 'Ontem';
     return '${value.day.toString().padLeft(2, '0')}/'
         '${value.month.toString().padLeft(2, '0')}/${value.year}';
+  }
+
+  String _formatDuration(Duration value) {
+    final minutes = value.inMinutes;
+    final seconds = value.inSeconds.remainder(60);
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 }

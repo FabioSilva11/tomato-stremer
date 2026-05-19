@@ -25,6 +25,13 @@ class AppController extends ChangeNotifier {
   int get unreadNotifications =>
       notifications.where((item) => item.unread).length;
 
+  Set<int> get watchedEpisodeIds =>
+      history.map((entry) => entry.episodeId).toSet();
+
+  Map<int, WatchHistoryEntry> get historyByEpisode => {
+    for (final entry in history) entry.episodeId: entry,
+  };
+
   Future<void> initialize() async {
     await loadLibrary();
     await loadHome();
@@ -92,6 +99,31 @@ class AppController extends ChangeNotifier {
   Future<void> addNotificationHistory(EpisodeNotification item) async {
     await _database.saveHistory(WatchHistoryEntry.fromNotification(item));
     await loadLibrary();
+  }
+
+  WatchHistoryEntry? historyForEpisode(int episodeId) {
+    for (final entry in history) {
+      if (entry.episodeId == episodeId) return entry;
+    }
+    return null;
+  }
+
+  Future<WatchHistoryEntry?> loadHistoryForEpisode(int episodeId) async {
+    return _database.findHistory(episodeId);
+  }
+
+  Future<void> savePlaybackProgress({
+    required int episodeId,
+    required Duration position,
+    required Duration duration,
+    bool notify = false,
+  }) async {
+    await _database.savePlaybackProgress(
+      episodeId: episodeId,
+      position: position,
+      duration: duration,
+    );
+    await loadLibrary(notify: notify);
   }
 
   Future<void> clearHistory() async {

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/api/tomato_api.dart';
 import '../../core/models/anime_models.dart';
+import '../../core/models/library_models.dart';
 import '../../core/state/app_controller.dart';
 import '../../shared/widgets/poster_image.dart';
 import '../../theme/app_theme.dart';
@@ -97,6 +98,9 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
           }
 
           final anime = snapshot.data!;
+          final historyByEpisode = context
+              .watch<AppController>()
+              .historyByEpisode;
           final season =
               _selectedSeason ??
               (anime.seasons.isNotEmpty ? anime.seasons.first : null);
@@ -319,6 +323,7 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
                 context: context,
                 season: season,
                 animeName: anime.name,
+                historyByEpisode: historyByEpisode,
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 18)),
             ],
@@ -332,6 +337,7 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
     required BuildContext context,
     required AnimeSeason? season,
     required String animeName,
+    required Map<int, WatchHistoryEntry> historyByEpisode,
   }) {
     if (season == null) {
       return [
@@ -396,7 +402,11 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
               18,
               index == _episodes.length - 1 && !_episodeHasMore ? 26 : 0,
             ),
-            child: _EpisodeCard(episode: episode, animeName: animeName),
+            child: _EpisodeCard(
+              episode: episode,
+              animeName: animeName,
+              history: historyByEpisode[episode.id],
+            ),
           );
         }, childCount: _episodes.length),
       ),
@@ -428,13 +438,20 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
 }
 
 class _EpisodeCard extends StatelessWidget {
-  const _EpisodeCard({required this.episode, required this.animeName});
+  const _EpisodeCard({
+    required this.episode,
+    required this.animeName,
+    required this.history,
+  });
 
   final Episode episode;
   final String animeName;
+  final WatchHistoryEntry? history;
 
   @override
   Widget build(BuildContext context) {
+    final watched = history != null;
+    final progress = history?.progress ?? 0;
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: () async {
@@ -464,6 +481,20 @@ class _EpisodeCard extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     PosterImage(url: episode.thumbnail, borderRadius: 14),
+                    if (watched)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: CircleAvatar(
+                          radius: 14,
+                          backgroundColor: AppTheme.primaryOf(context),
+                          child: const Icon(
+                            LucideIcons.check,
+                            size: 16,
+                            color: AppTheme.onPrimary,
+                          ),
+                        ),
+                      ),
                     const Center(
                       child: CircleAvatar(
                         radius: 18,
@@ -494,6 +525,35 @@ class _EpisodeCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
+                  if (watched) ...[
+                    Row(
+                      children: [
+                        Pill(
+                          label: _historyLabel(history!),
+                          icon: progress > 0 && progress < 0.92
+                              ? LucideIcons.play
+                              : LucideIcons.check,
+                        ),
+                      ],
+                    ),
+                    if (progress > 0 && progress < 0.98) ...[
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(99),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 4,
+                          backgroundColor: AppTheme.mutedOf(
+                            context,
+                          ).withValues(alpha: 0.22),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppTheme.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                  ],
                   Row(
                     children: [
                       Icon(
@@ -517,6 +577,19 @@ class _EpisodeCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _historyLabel(WatchHistoryEntry history) {
+  if (history.progress > 0 && history.progress < 0.92) {
+    return 'Continuar ${_formatDuration(history.playbackPosition)}';
+  }
+  return 'Assistido';
+}
+
+String _formatDuration(Duration value) {
+  final minutes = value.inMinutes;
+  final seconds = value.inSeconds.remainder(60);
+  return '$minutes:${seconds.toString().padLeft(2, '0')}';
 }
 
 String _releaseDayLabel(String value) {

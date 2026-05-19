@@ -3,7 +3,9 @@
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
+*.iml
 build/
+android/hs_err_pid*.log
 android/local.properties
 ios/Pods/
 macos/Pods/

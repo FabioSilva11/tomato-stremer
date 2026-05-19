@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -21,7 +23,10 @@ class PlayerPage extends StatefulWidget {
 class _PlayerPageState extends State<PlayerPage> {
   Future<EpisodeStream>? _streamFuture;
   VideoPlayerController? _video;
+  AppController? _appController;
+  int? _currentEpisodeId;
   String? _quality;
+  Duration _lastSavedPosition = Duration.zero;
   bool _showControls = true;
   bool _landscape = false;
 
@@ -31,16 +36,27 @@ class _PlayerPageState extends State<PlayerPage> {
     _load(widget.episodeId);
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _appController = context.read<AppController>();
+  }
+
   Future<void> _load(int episodeId) async {
+    final api = context.read<TomatoApi>();
+    await _persistPlayback();
     final old = _video;
-    final future = context.read<TomatoApi>().fetchStream(episodeId);
+    final future = api.fetchStream(episodeId);
     setState(() {
       _streamFuture = future;
       _video = null;
       _quality = null;
       _showControls = true;
     });
+    old?.removeListener(_handleVideoTick);
     await old?.dispose();
+    _currentEpisodeId = episodeId;
+    _lastSavedPosition = Duration.zero;
 
     late final EpisodeStream stream;
     try {
@@ -48,14 +64,18 @@ class _PlayerPageState extends State<PlayerPage> {
     } catch (_) {
       return;
     }
-    if (mounted) {
-      await context.read<AppController>().addStreamHistory(stream);
-    }
+    final controller = _appController;
+    final resumeEntry = await controller?.loadHistoryForEpisode(episodeId);
+    await controller?.addStreamHistory(stream);
     final quality = _bestQuality(stream);
     final url = quality == null ? null : stream.streams[quality];
     if (url == null || !mounted) return;
     setState(() => _quality = quality);
-    await _playUrl(url, startPlaying: true);
+    await _playUrl(
+      url,
+      startPlaying: true,
+      position: resumeEntry?.playbackPosition ?? Duration.zero,
+    );
   }
 
   Future<void> _playUrl(
@@ -65,14 +85,20 @@ class _PlayerPageState extends State<PlayerPage> {
   }) async {
     final old = _video;
     if (mounted) setState(() => _video = null);
+    old?.removeListener(_handleVideoTick);
     await old?.dispose();
     if (!mounted) return;
     final video = VideoPlayerController.networkUrl(Uri.parse(url));
     setState(() => _video = video);
     await video.initialize();
-    if (position > Duration.zero) {
+    final canResume =
+        position > const Duration(seconds: 5) &&
+        position < video.value.duration - const Duration(seconds: 8);
+    if (canResume) {
       await video.seekTo(position);
     }
+    _lastSavedPosition = video.value.position;
+    video.addListener(_handleVideoTick);
     if (startPlaying) {
       await video.play();
     }
@@ -85,15 +111,42 @@ class _PlayerPageState extends State<PlayerPage> {
     final old = _video;
     final position = old?.value.position ?? Duration.zero;
     final wasPlaying = old?.value.isPlaying ?? true;
+    await _persistPlayback();
     if (mounted) setState(() => _quality = quality);
     await _playUrl(url, startPlaying: wasPlaying, position: position);
   }
 
   @override
   void dispose() {
+    unawaited(_persistPlayback(notify: true));
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     _video?.dispose();
     super.dispose();
+  }
+
+  void _handleVideoTick() {
+    final video = _video;
+    if (video == null || !video.value.isInitialized) return;
+    final position = video.value.position;
+    if ((position - _lastSavedPosition).abs() < const Duration(seconds: 5)) {
+      return;
+    }
+    _lastSavedPosition = position;
+    unawaited(_persistPlayback());
+  }
+
+  Future<void> _persistPlayback({bool notify = false}) async {
+    final video = _video;
+    final episodeId = _currentEpisodeId;
+    if (video == null || episodeId == null || !video.value.isInitialized) {
+      return;
+    }
+    await _appController?.savePlaybackProgress(
+      episodeId: episodeId,
+      position: video.value.position,
+      duration: video.value.duration,
+      notify: notify,
+    );
   }
 
   Future<void> _toggleRotation() async {
@@ -124,9 +177,7 @@ class _PlayerPageState extends State<PlayerPage> {
           final stream = snapshot.data!;
           final video = _video;
           if (stream.bestUrl == null) {
-            return const _PlayerError(
-              error: 'Nenhum link de streaming foi retornado para o episodio.',
-            );
+            return const _PlayerError(error: TomatoApi.maintenanceMessage);
           }
           return GestureDetector(
             onTap: () => setState(() => _showControls = !_showControls),

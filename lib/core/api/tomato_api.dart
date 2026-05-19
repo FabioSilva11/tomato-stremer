@@ -10,6 +10,8 @@ class TomatoApi {
   TomatoApi({http.Client? client}) : _client = client ?? http.Client();
 
   static const String baseUrl = 'https://edge.betomato.com';
+  static const String maintenanceMessage =
+      'Servidor em manutencao. Tente voltar mais tarde.';
   static const String devToken =
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1NTAyMDgsInV1aWQiOiI1MWYwNWMxZC0xYWQwLTQxOWItOWE5MC1iOTljZGI3MGU4YTQiLCJpYXQiOjE3Njk3MTMwMzN9.tCqgd5IhVtw4M11mGGJ_d9oDoRj7nPJlW4MMBncp7z0';
 
@@ -34,61 +36,71 @@ class TomatoApi {
   }
 
   Future<FeedResponse> fetchFeed() async {
-    final response = await _client.get(
-      Uri.parse('$baseUrl/v2/animes/feed'),
-      headers: _headers(),
-    );
-    final json = _decode(response);
-    return FeedResponse.fromJson(json);
+    return _guard(() async {
+      final response = await _client.get(
+        Uri.parse('$baseUrl/v2/animes/feed'),
+        headers: _headers(),
+      );
+      final json = _decode(response);
+      return FeedResponse.fromJson(json);
+    });
   }
 
   Future<List<SearchItem>> search(String query, {int page = 0}) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/v2/content/search'),
-      headers: _headers(json: true),
-      body: jsonEncode({
-        'token': devToken,
-        'search': query,
-        'content_type': 'all',
-        'page': page,
-      }),
-    );
-    final json = _decode(response);
-    final raw = json['result'];
-    return raw is List
-        ? raw
-              .whereType<Map>()
-              .map((item) => SearchItem.fromJson(item.cast<String, dynamic>()))
-              .toList()
-        : const [];
+    return _guard(() async {
+      final response = await _client.post(
+        Uri.parse('$baseUrl/v2/content/search'),
+        headers: _headers(json: true),
+        body: jsonEncode({
+          'token': devToken,
+          'search': query,
+          'content_type': 'all',
+          'page': page,
+        }),
+      );
+      final json = _decode(response);
+      final raw = json['result'];
+      return raw is List
+          ? raw
+                .whereType<Map>()
+                .map(
+                  (item) => SearchItem.fromJson(item.cast<String, dynamic>()),
+                )
+                .toList()
+          : const [];
+    });
   }
 
   Future<AnimeDetails> fetchAnime(int animeId) async {
-    final response = await _client.get(
-      Uri.parse('$baseUrl/v2/anime/$animeId'),
-      headers: _headers(),
-    );
-    return AnimeDetails.fromJson(_decode(response));
+    return _guard(() async {
+      final response = await _client.get(
+        Uri.parse('$baseUrl/v2/anime/$animeId'),
+        headers: _headers(),
+      );
+      return AnimeDetails.fromJson(_decode(response));
+    });
   }
 
   Future<EpisodePage> fetchEpisodePage(int seasonId, {int page = 0}) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/season/$seasonId/episodes'),
-      headers: _headers(json: true),
-      body: jsonEncode({'token': devToken, 'page': page, 'order': 'ASC'}),
-    );
-    final json = _decode(response);
-    final raw = json['data'];
-    final List<Episode> items = raw is List
-        ? raw
-              .whereType<Map>()
-              .map((item) => Episode.fromJson(item.cast<String, dynamic>()))
-              .toList()
-        : const <Episode>[];
-    return EpisodePage(
-      total: (json['episodes'] as num?)?.toInt() ?? items.length,
-      items: items,
-    );
+    return _guard(() async {
+      final response = await _client.post(
+        Uri.parse('$baseUrl/season/$seasonId/episodes'),
+        headers: _headers(json: true),
+        body: jsonEncode({'token': devToken, 'page': page, 'order': 'ASC'}),
+      );
+      final json = _decode(response);
+      final raw = json['data'];
+      final List<Episode> items = raw is List
+          ? raw
+                .whereType<Map>()
+                .map((item) => Episode.fromJson(item.cast<String, dynamic>()))
+                .toList()
+          : const <Episode>[];
+      return EpisodePage(
+        total: (json['episodes'] as num?)?.toInt() ?? items.length,
+        items: items,
+      );
+    });
   }
 
   Future<List<Episode>> fetchEpisodes(int seasonId, {int page = 0}) async {
@@ -96,20 +108,35 @@ class TomatoApi {
   }
 
   Future<EpisodeStream> fetchStream(int episodeId) async {
-    final response = await _client.get(
-      Uri.parse('$baseUrl/v2/anime/episode/$episodeId/stream'),
-      headers: _headers(json: true, stream: true),
-    );
-    return EpisodeStream.fromJson(episodeId, _decode(response));
+    return _guard(() async {
+      final response = await _client.get(
+        Uri.parse('$baseUrl/v2/anime/episode/$episodeId/stream'),
+        headers: _headers(json: true, stream: true),
+      );
+      return EpisodeStream.fromJson(episodeId, _decode(response));
+    });
+  }
+
+  Future<T> _guard<T>(Future<T> Function() request) async {
+    try {
+      return await request();
+    } catch (_) {
+      throw const TomatoApiException(maintenanceMessage);
+    }
   }
 
   Map<String, dynamic> _decode(http.Response response) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw TomatoApiException('HTTP ${response.statusCode}: ${response.body}');
+      throw const TomatoApiException(maintenanceMessage);
     }
-    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (_) {
+      throw const TomatoApiException(maintenanceMessage);
+    }
     if (decoded is! Map<String, dynamic>) {
-      throw const TomatoApiException('Resposta inesperada da API.');
+      throw const TomatoApiException(maintenanceMessage);
     }
     return decoded;
   }

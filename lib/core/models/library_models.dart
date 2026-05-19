@@ -79,6 +79,8 @@ class WatchHistoryEntry {
     required this.animeName,
     required this.thumbnail,
     required this.minutes,
+    required this.playbackPosition,
+    required this.duration,
     required this.watchedAt,
   });
 
@@ -90,7 +92,17 @@ class WatchHistoryEntry {
   final String animeName;
   final String thumbnail;
   final int minutes;
+  final Duration playbackPosition;
+  final Duration duration;
   final DateTime watchedAt;
+
+  double get progress {
+    final total = duration.inMilliseconds;
+    if (total <= 0) return 0;
+    return (playbackPosition.inMilliseconds / total).clamp(0, 1);
+  }
+
+  bool get hasProgress => playbackPosition.inSeconds > 5;
 
   factory WatchHistoryEntry.fromEpisode({
     required Episode episode,
@@ -105,6 +117,8 @@ class WatchHistoryEntry {
       animeName: animeName,
       thumbnail: episode.thumbnail,
       minutes: episode.minutes,
+      playbackPosition: Duration.zero,
+      duration: Duration.zero,
       watchedAt: DateTime.now(),
     );
   }
@@ -119,6 +133,8 @@ class WatchHistoryEntry {
       animeName: 'Anime #${stream.animeId}',
       thumbnail: '',
       minutes: 0,
+      playbackPosition: Duration.zero,
+      duration: Duration.zero,
       watchedAt: DateTime.now(),
     );
   }
@@ -133,6 +149,8 @@ class WatchHistoryEntry {
       animeName: item.animeName ?? 'Anime #${item.animeId}',
       thumbnail: item.thumbnail,
       minutes: 0,
+      playbackPosition: Duration.zero,
+      duration: Duration.zero,
       watchedAt: DateTime.now(),
     );
   }
@@ -147,6 +165,8 @@ class WatchHistoryEntry {
       animeName: item.animeName,
       thumbnail: item.thumbnail,
       minutes: 0,
+      playbackPosition: Duration.zero,
+      duration: Duration.zero,
       watchedAt: DateTime.now(),
     );
   }
@@ -161,6 +181,10 @@ class WatchHistoryEntry {
       animeName: (map['anime_name'] ?? '').toString(),
       thumbnail: (map['thumbnail'] ?? '').toString(),
       minutes: (map['minutes'] as int?) ?? 0,
+      playbackPosition: Duration(
+        milliseconds: (map['playback_position_ms'] as int?) ?? 0,
+      ),
+      duration: Duration(milliseconds: (map['duration_ms'] as int?) ?? 0),
       watchedAt: DateTime.fromMillisecondsSinceEpoch(
         (map['watched_at'] as int?) ?? 0,
       ),
@@ -177,8 +201,30 @@ class WatchHistoryEntry {
       'anime_name': animeName,
       'thumbnail': thumbnail,
       'minutes': minutes,
+      'playback_position_ms': playbackPosition.inMilliseconds,
+      'duration_ms': duration.inMilliseconds,
       'watched_at': watchedAt.millisecondsSinceEpoch,
     };
+  }
+
+  WatchHistoryEntry copyWith({
+    Duration? playbackPosition,
+    Duration? duration,
+    DateTime? watchedAt,
+  }) {
+    return WatchHistoryEntry(
+      episodeId: episodeId,
+      animeId: animeId,
+      seasonId: seasonId,
+      episodeNumber: episodeNumber,
+      episodeName: episodeName,
+      animeName: animeName,
+      thumbnail: thumbnail,
+      minutes: minutes,
+      playbackPosition: playbackPosition ?? this.playbackPosition,
+      duration: duration ?? this.duration,
+      watchedAt: watchedAt ?? this.watchedAt,
+    );
   }
 }
 

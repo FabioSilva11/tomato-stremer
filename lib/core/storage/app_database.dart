@@ -13,7 +13,7 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'tomato_streaming.db');
     final db = await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE meta (
@@ -44,6 +44,8 @@ class AppDatabase {
             anime_name TEXT NOT NULL,
             thumbnail TEXT NOT NULL,
             minutes INTEGER NOT NULL,
+            playback_position_ms INTEGER NOT NULL DEFAULT 0,
+            duration_ms INTEGER NOT NULL DEFAULT 0,
             watched_at INTEGER NOT NULL
           )
         ''');
@@ -71,10 +73,24 @@ class AppDatabase {
         if (oldVersion < 2) {
           await _createAnimeTitlesTable(db);
         }
+        if (oldVersion < 3) {
+          await _addPlaybackColumns(db);
+        }
       },
     );
     _database = db;
     return db;
+  }
+
+  Future<void> _addPlaybackColumns(DatabaseExecutor db) async {
+    await db.execute(
+      'ALTER TABLE watch_history ADD COLUMN playback_position_ms '
+      'INTEGER NOT NULL DEFAULT 0',
+    );
+    await db.execute(
+      'ALTER TABLE watch_history ADD COLUMN duration_ms '
+      'INTEGER NOT NULL DEFAULT 0',
+    );
   }
 
   Future<void> _createAnimeTitlesTable(DatabaseExecutor db) async {
@@ -158,6 +174,17 @@ class AppDatabase {
     return rows.map(WatchHistoryEntry.fromMap).toList();
   }
 
+  Future<WatchHistoryEntry?> findHistory(int episodeId) async {
+    final db = await _db;
+    final rows = await db.query(
+      'watch_history',
+      where: 'episode_id = ?',
+      whereArgs: [episodeId],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : WatchHistoryEntry.fromMap(rows.first);
+  }
+
   Future<void> saveHistory(WatchHistoryEntry entry) async {
     final db = await _db;
     final existingRows = await db.query(
@@ -182,6 +209,12 @@ class AppDatabase {
           'minutes': existing.minutes,
         if (entry.seasonId == 0 && existing.seasonId > 0)
           'season_id': existing.seasonId,
+        if (entry.playbackPosition == Duration.zero &&
+            existing.playbackPosition > Duration.zero)
+          'playback_position_ms': existing.playbackPosition.inMilliseconds,
+        if (entry.duration == Duration.zero &&
+            existing.duration > Duration.zero)
+          'duration_ms': existing.duration.inMilliseconds,
       };
     }
     await db.insert(
@@ -189,6 +222,39 @@ class AppDatabase {
       values,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  Future<void> savePlaybackProgress({
+    required int episodeId,
+    required Duration position,
+    required Duration duration,
+  }) async {
+    final db = await _db;
+    final affected = await db.update(
+      'watch_history',
+      {
+        'playback_position_ms': position.inMilliseconds,
+        'duration_ms': duration.inMilliseconds,
+        'watched_at': DateTime.now().millisecondsSinceEpoch,
+      },
+      where: 'episode_id = ?',
+      whereArgs: [episodeId],
+    );
+    if (affected > 0) return;
+
+    await db.insert('watch_history', {
+      'episode_id': episodeId,
+      'anime_id': 0,
+      'season_id': 0,
+      'episode_number': 0,
+      'episode_name': 'Episodio',
+      'anime_name': 'Anime',
+      'thumbnail': '',
+      'minutes': 0,
+      'playback_position_ms': position.inMilliseconds,
+      'duration_ms': duration.inMilliseconds,
+      'watched_at': DateTime.now().millisecondsSinceEpoch,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> clearHistory() async {
