@@ -1,0 +1,11 @@
+{
+  "name": "tomato",
+  "short_name": "tomato",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#090A10",
+  "theme_color": "#EA3448",
+  "description": "Streaming de animes",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false
+}
