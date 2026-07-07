@@ -34,7 +34,7 @@
   "adTitle": "Advertisement",
   "adMessage": "Watch a short ad to continue watching for free.",
   "cancel": "Cancel",
-  "continue": "Continue",
+  "continueButton": "Continue",
   "skip": "Skip",
   "rewind10": "Rewind 10s",
   "forward10": "Forward 10s",

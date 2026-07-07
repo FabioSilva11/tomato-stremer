@@ -34,7 +34,7 @@
   "adTitle": "Anúncio",
   "adMessage": "Assista a um pequeno anúncio para continuar assistindo gratuitamente.",
   "cancel": "Cancelar",
-  "continue": "Continuar",
+  "continueButton": "Continuar",
   "skip": "Pular",
   "rewind10": "Voltar 10s",
   "forward10": "Avançar 10s",
