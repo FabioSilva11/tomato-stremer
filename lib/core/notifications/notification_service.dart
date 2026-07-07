@@ -3,7 +3,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../models/feed_models.dart';
-import '../models/library_models.dart';
 import '../storage/app_database.dart';
 
 /// Serviço de notificações para novos episódios

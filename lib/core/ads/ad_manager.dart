@@ -25,20 +25,14 @@ class AdManager {
   factory AdManager() => _instance;
   AdManager._internal();
 
-  // ============= IDs DO ADMOB =============
-  static const String _admobAppId = 'ca-app-pub-6598765502914364~1736433666';
+  // ============= IDs DO ADMOB (PRODUÇÃO) =============
+  // App ID: ca-app-pub-6598765502914364~1736433666
   static const String _admobRewardedId = 'ca-app-pub-6598765502914364/1896215768';
   static const String _admobBannerId = 'ca-app-pub-6598765502914364/2213698978';
-  
-  // IDs de teste do AdMob
-  static const String _admobTestRewardedId = 'ca-app-pub-3940256099942544/5224354917';
-  static const String _admobTestBannerId = 'ca-app-pub-3940256099942544/6300978111';
 
-  // ============= IDs DO UNITY ADS =============
-  // IDs de produção baseados na configuração do dashboard
+  // ============= IDs DO UNITY ADS (PRODUÇÃO) =============
   static const String _unityGameIdAndroid = '5740617';
   static const String _unityRewardedId = 'Rewarded_Android';
-  static const String _unityInterstitialId = 'Interstitial_Android';
   static const String _unityBannerId = 'Banner_Android';
 
   // Estado
@@ -57,7 +51,6 @@ class AdManager {
   RewardedAd? _admobRewardedAd;
   BannerAd? _admobBannerAd;
   bool _isRewardedAdReady = false;
-  bool _isBannerAdReady = false;
 
   // Políticas de exibição
   int _videosWatchedCount = 0;
@@ -72,10 +65,10 @@ class AdManager {
     print('🎯 Inicializando gerenciador de anúncios...');
 
     // Inicializar AdMob
-    await _initializeAdMob(useTestAds: useTestAds);
+    await _initializeAdMob(testMode: useTestAds);
     
     // Inicializar Unity Ads
-    await _initializeUnityAds(useTestAds: useTestAds);
+    await _initializeUnityAds(testMode: useTestAds);
 
     _initialized = true;
     
@@ -89,7 +82,7 @@ class AdManager {
   }
 
   /// Inicializa AdMob
-  Future<void> _initializeAdMob({required bool useTestAds}) async {
+  Future<void> _initializeAdMob({required bool testMode}) async {
     try {
       await MobileAds.instance.initialize();
       
@@ -98,12 +91,12 @@ class AdManager {
           maxAdContentRating: MaxAdContentRating.t,
           tagForChildDirectedTreatment: TagForChildDirectedTreatment.no,
           tagForUnderAgeOfConsent: TagForUnderAgeOfConsent.no,
-          testDeviceIds: useTestAds ? ['YOUR_TEST_DEVICE_ID'] : [],
+          testDeviceIds: testMode ? ['TEST_DEVICE_ID_HERE'] : [],
         ),
       );
 
       _admobAvailable = true;
-      await _loadAdMobRewardedAd(useTestAds: useTestAds);
+      await _loadAdMobRewardedAd();
       print('✅ AdMob inicializado com sucesso');
     } catch (e) {
       _admobAvailable = false;
@@ -112,11 +105,11 @@ class AdManager {
   }
 
   /// Inicializa Unity Ads
-  Future<void> _initializeUnityAds({required bool useTestAds}) async {
+  Future<void> _initializeUnityAds({required bool testMode}) async {
     try {
       await UnityAds.init(
         gameId: _unityGameIdAndroid,
-        testMode: useTestAds,
+        testMode: testMode,
         onComplete: () {
           print('✅ Unity Ads inicializado com sucesso');
           _unityAvailable = true;
@@ -134,14 +127,12 @@ class AdManager {
   }
 
   /// Carrega anúncio premiado do AdMob
-  Future<void> _loadAdMobRewardedAd({bool useTestAds = false}) async {
+  Future<void> _loadAdMobRewardedAd() async {
     if (_admobRewardedAd != null) return;
-
-    final adUnitId = useTestAds ? _admobTestRewardedId : _admobRewardedId;
 
     try {
       await RewardedAd.load(
-        adUnitId: adUnitId,
+        adUnitId: _admobRewardedId,
         request: const AdRequest(),
         rewardedAdLoadCallback: RewardedAdLoadCallback(
           onAdLoaded: (ad) {
@@ -155,7 +146,7 @@ class AdManager {
                 ad.dispose();
                 _admobRewardedAd = null;
                 _isRewardedAdReady = false;
-                _loadAdMobRewardedAd(useTestAds: useTestAds);
+                _loadAdMobRewardedAd();
               },
               onAdFailedToShowFullScreenContent: (ad, error) {
                 print('❌ Erro ao exibir AdMob ad: $error');
@@ -163,7 +154,7 @@ class AdManager {
                 _admobRewardedAd = null;
                 _isRewardedAdReady = false;
                 _admobFailCount++;
-                _loadAdMobRewardedAd(useTestAds: useTestAds);
+                _loadAdMobRewardedAd();
               },
             );
           },
@@ -173,7 +164,7 @@ class AdManager {
             _admobFailCount++;
             
             Future.delayed(const Duration(seconds: 30), () {
-              _loadAdMobRewardedAd(useTestAds: useTestAds);
+              _loadAdMobRewardedAd();
             });
           },
         ),
@@ -206,27 +197,23 @@ class AdManager {
   }
 
   /// Carrega banner do AdMob
-  Future<BannerAd?> loadAdMobBanner({bool useTestAds = false}) async {
+  Future<BannerAd?> loadAdMobBanner() async {
     if (_admobBannerAd != null) return _admobBannerAd;
-
-    final adUnitId = useTestAds ? _admobTestBannerId : _admobBannerId;
 
     try {
       final banner = BannerAd(
-        adUnitId: adUnitId,
+        adUnitId: _admobBannerId,
         size: AdSize.banner,
         request: const AdRequest(),
         listener: BannerAdListener(
           onAdLoaded: (ad) {
             print('✅ AdMob banner carregado');
             _admobBannerAd = ad as BannerAd;
-            _isBannerAdReady = true;
           },
           onAdFailedToLoad: (ad, error) {
             print('❌ Erro ao carregar AdMob banner: $error');
             ad.dispose();
             _admobBannerAd = null;
-            _isBannerAdReady = false;
           },
         ),
       );
@@ -341,13 +328,10 @@ class AdManager {
       return false;
     }
 
-    bool adWatched = false;
-
     try {
       await ad.show(
         onUserEarnedReward: (ad, reward) {
           print('✅ Usuário assistiu AdMob ad completo');
-          adWatched = true;
           _lastAdShown = DateTime.now();
           _videosWatchedCount = 0;
           _admobSuccessCount++;
@@ -441,15 +425,12 @@ class AdManager {
     _admobRewardedAd = null;
     _admobBannerAd = null;
     _isRewardedAdReady = false;
-    _isBannerAdReady = false;
   }
 }
 
 /// Widget para exibir banner do AdMob ou Unity
 class AdBannerWidget extends StatefulWidget {
-  const AdBannerWidget({super.key, this.useTestAds = false});
-
-  final bool useTestAds;
+  const AdBannerWidget({super.key});
 
   @override
   State<AdBannerWidget> createState() => _AdBannerWidgetState();
@@ -468,9 +449,7 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
 
   Future<void> _loadBanner() async {
     // Tentar carregar AdMob primeiro
-    final banner = await AdManager().loadAdMobBanner(
-      useTestAds: widget.useTestAds,
-    );
+    final banner = await AdManager().loadAdMobBanner();
 
     if (banner != null && mounted) {
       setState(() {
