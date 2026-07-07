@@ -38,7 +38,9 @@ jobs:
           dart --version
 
       - name: Get dependencies
-        run: flutter pub get
+        run: |
+          flutter clean
+          flutter pub get
 
       - name: Generate localizations
         run: flutter gen-l10n

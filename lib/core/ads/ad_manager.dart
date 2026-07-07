@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+// import 'package:google_mobile_ads/google_mobile_ads.dart';  // Temporariamente removido
 import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 
 /// Plataforma de anúncios disponível
@@ -48,8 +48,8 @@ class AdManager {
   int _unityFailCount = 0;
   
   // Cache de anúncios
-  RewardedAd? _admobRewardedAd;
-  BannerAd? _admobBannerAd;
+  // RewardedAd? _admobRewardedAd;  // Temporariamente removido
+  // BannerAd? _admobBannerAd;     // Temporariamente removido
   bool _isRewardedAdReady = false;
 
   // Políticas de exibição
@@ -84,6 +84,8 @@ class AdManager {
   /// Inicializa AdMob
   Future<void> _initializeAdMob({required bool testMode}) async {
     try {
+      // Temporariamente desabilitado AdMob
+      /*
       await MobileAds.instance.initialize();
       
       await MobileAds.instance.updateRequestConfiguration(
@@ -97,7 +99,9 @@ class AdManager {
 
       _admobAvailable = true;
       await _loadAdMobRewardedAd();
-      print('✅ AdMob inicializado com sucesso');
+      */
+      _admobAvailable = false;  // Forçar false por enquanto
+      print('⚠️ AdMob temporariamente desabilitado');
     } catch (e) {
       _admobAvailable = false;
       print('❌ Erro ao inicializar AdMob: $e');
@@ -128,6 +132,8 @@ class AdManager {
 
   /// Carrega anúncio premiado do AdMob
   Future<void> _loadAdMobRewardedAd() async {
+    // Temporariamente desabilitado
+    /*
     if (_admobRewardedAd != null) return;
 
     try {
@@ -173,6 +179,8 @@ class AdManager {
       print('❌ Exceção ao carregar AdMob ad: $e');
       _admobFailCount++;
     }
+    */
+    print('⚠️ AdMob ads temporariamente desabilitados');
   }
 
   /// Carrega anúncio premiado do Unity
