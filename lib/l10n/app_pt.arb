@@ -1,0 +1,65 @@
+{
+  "@@locale": "pt",
+  "appName": "Tomato",
+  "home": "Início",
+  "search": "Pesquisar",
+  "library": "Biblioteca",
+  "favorites": "Favoritos",
+  "history": "Histórico",
+  "notifications": "Notificações",
+  "watchNow": "Assistir Agora",
+  "continueWatching": "Continuar Assistindo",
+  "newEpisodes": "Novos Episódios",
+  "trending": "Em Alta",
+  "mostPopular": "Mais Populares",
+  "season": "Temporada",
+  "episode": "Episódio",
+  "episodes": "Episódios",
+  "dubbed": "Dublado",
+  "subtitled": "Legendado",
+  "play": "Reproduzir",
+  "pause": "Pausar",
+  "nextEpisode": "Próximo Episódio",
+  "previousEpisode": "Episódio Anterior",
+  "quality": "Qualidade",
+  "addToFavorites": "Adicionar aos Favoritos",
+  "removeFromFavorites": "Remover dos Favoritos",
+  "clearHistory": "Limpar Histórico",
+  "noResults": "Nenhum resultado encontrado",
+  "searchHint": "Pesquisar anime...",
+  "loading": "Carregando...",
+  "error": "Erro",
+  "tryAgain": "Tentar Novamente",
+  "serverMaintenance": "Servidor em manutenção. Tente voltar mais tarde.",
+  "adTitle": "Anúncio",
+  "adMessage": "Assista a um pequeno anúncio para continuar assistindo gratuitamente.",
+  "cancel": "Cancelar",
+  "continue": "Continuar",
+  "skip": "Pular",
+  "rewind10": "Voltar 10s",
+  "forward10": "Avançar 10s",
+  "rotateScreen": "Girar Tela",
+  "backToPortrait": "Voltar para Retrato",
+  "newEpisodeAvailable": "Novo episódio disponível",
+  "episodeNotification": "{animeName} - {episodeName}",
+  "@episodeNotification": {
+    "placeholders": {
+      "animeName": {
+        "type": "String"
+      },
+      "episodeName": {
+        "type": "String"
+      }
+    }
+  },
+  "videosWatched": "Vídeos assistidos desde último anúncio: {count}",
+  "@videosWatched": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "useLightTheme": "Usar tema claro",
+  "useDarkTheme": "Usar tema escuro"
+}

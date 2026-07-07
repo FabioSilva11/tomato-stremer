@@ -1,22 +1,34 @@
 import 'package:flutter/foundation.dart';
 
+import '../api/streambert_api.dart';
 import '../api/tomato_api.dart';
 import '../models/anime_models.dart';
 import '../models/feed_models.dart';
 import '../models/library_models.dart';
+import '../models/streambert_models.dart';
 import '../storage/app_database.dart';
 
 class AppController extends ChangeNotifier {
-  AppController({required TomatoApi api, required AppDatabase database})
-    : _api = api,
-      _database = database;
+  AppController({
+    required TomatoApi api,
+    required StreambertApi streambertApi,
+    required AppDatabase database,
+  }) : _api = api,
+       _streambertApi = streambertApi,
+       _database = database;
 
   final TomatoApi _api;
+  final StreambertApi _streambertApi;
   final AppDatabase _database;
+  static const String _tmdbTokenKey = 'tmdb_read_token';
 
   bool loading = false;
+  bool streambertLoading = false;
   String? error;
+  String? streambertError;
   FeedResponse? feed;
+  StreambertCatalog? streambertCatalog;
+  String tmdbToken = StreambertApi.defaultToken;
   List<SavedAnime> favorites = const [];
   List<WatchHistoryEntry> history = const [];
   List<EpisodeNotification> notifications = const [];
@@ -32,8 +44,11 @@ class AppController extends ChangeNotifier {
     for (final entry in history) entry.episodeId: entry,
   };
 
+  bool get hasTmdbToken => tmdbToken.trim().isNotEmpty;
+
   Future<void> initialize() async {
     await loadLibrary();
+    await loadTmdbToken();
     await loadHome();
   }
 
@@ -51,6 +66,44 @@ class AppController extends ChangeNotifier {
       error = e.toString();
     } finally {
       loading = false;
+      notifyListeners();
+    }
+    if (hasTmdbToken) {
+      await loadStreambertCatalog();
+    }
+  }
+
+  Future<void> loadTmdbToken() async {
+    final stored = await _database.loadMeta(_tmdbTokenKey);
+    final clean = StreambertApi.cleanToken(stored ?? '');
+    if (clean.isNotEmpty) {
+      tmdbToken = clean;
+    }
+  }
+
+  Future<void> saveTmdbToken(String token) async {
+    final clean = StreambertApi.cleanToken(token);
+    tmdbToken = clean;
+    streambertError = null;
+    streambertCatalog = null;
+    await _database.saveMeta(_tmdbTokenKey, clean);
+    notifyListeners();
+    if (clean.isNotEmpty) {
+      await loadStreambertCatalog();
+    }
+  }
+
+  Future<void> loadStreambertCatalog({bool notify = true}) async {
+    if (!hasTmdbToken) return;
+    streambertLoading = true;
+    streambertError = null;
+    if (notify) notifyListeners();
+    try {
+      streambertCatalog = await _streambertApi.fetchCatalog(tmdbToken);
+    } catch (error) {
+      streambertError = error.toString();
+    } finally {
+      streambertLoading = false;
       notifyListeners();
     }
   }

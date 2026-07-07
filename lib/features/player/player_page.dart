@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/ads/ad_manager.dart';
 import '../../core/api/tomato_api.dart';
 import '../../core/models/anime_models.dart';
 import '../../core/state/app_controller.dart';
@@ -29,6 +30,7 @@ class _PlayerPageState extends State<PlayerPage> {
   Duration _lastSavedPosition = Duration.zero;
   bool _showControls = true;
   bool _landscape = false;
+  final AdManager _adManager = AdManager();
 
   @override
   void initState() {
@@ -119,6 +121,10 @@ class _PlayerPageState extends State<PlayerPage> {
   @override
   void dispose() {
     unawaited(_persistPlayback(notify: true));
+    
+    // Incrementar contador de vídeos assistidos
+    _adManager.incrementVideoCount();
+    
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     _video?.dispose();
     super.dispose();
@@ -158,6 +164,60 @@ class _PlayerPageState extends State<PlayerPage> {
     );
     if (mounted) {
       setState(() => _landscape = landscape);
+    }
+  }
+
+  /// Tenta mostrar anúncio antes de carregar próximo vídeo
+  Future<void> _loadNextWithAd(int nextEpisodeId) async {
+    // Verificar se deve mostrar anúncio
+    if (_adManager.shouldShowAd()) {
+      // Mostrar diálogo de preparação
+      if (!mounted) return;
+      
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Anúncio'),
+          content: const Text(
+            'Assista a um pequeno anúncio para continuar assistindo gratuitamente.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Voltar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Continuar'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldContinue != true || !mounted) return;
+
+      // Mostrar anúncio (com fallback automático entre plataformas)
+      final adShown = await _adManager.showRewardedAd(
+        onAdWatched: () {
+          print('✅ Anúncio assistido, carregando próximo episódio');
+        },
+        onAdSkipped: () {
+          print('⏭️ Anúncio pulado');
+        },
+      );
+
+      if (adShown && !mounted) return;
+      
+      // Pequeno delay após anúncio
+      if (adShown) {
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+    }
+
+    // Carregar próximo episódio
+    if (mounted) {
+      await _load(nextEpisodeId);
     }
   }
 
@@ -203,7 +263,7 @@ class _PlayerPageState extends State<PlayerPage> {
                         _selectQuality(stream, quality),
                     onNext: stream.nextEpisodeId == null
                         ? null
-                        : () => _load(stream.nextEpisodeId!),
+                        : () => _loadNextWithAd(stream.nextEpisodeId!),
                   ),
               ],
             ),
@@ -310,6 +370,21 @@ class _PlayerOverlay extends StatelessWidget {
                   children: [
                     Row(
                       children: [
+                        // Botão voltar 10 segundos
+                        IconButton.filled(
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.black.withValues(alpha: 0.5),
+                          ),
+                          onPressed: () {
+                            final current = video.value.position;
+                            final newPosition = current - const Duration(seconds: 10);
+                            video.seekTo(newPosition.isNegative ? Duration.zero : newPosition);
+                          },
+                          icon: const Icon(LucideIcons.rewind, size: 20),
+                          tooltip: 'Voltar 10s',
+                        ),
+                        const SizedBox(width: 8),
+                        // Botão play/pause
                         IconButton.filled(
                           onPressed: () {
                             video.value.isPlaying
@@ -321,6 +396,21 @@ class _PlayerOverlay extends StatelessWidget {
                                 ? LucideIcons.pause
                                 : LucideIcons.play,
                           ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Botão avançar 10 segundos
+                        IconButton.filled(
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.black.withValues(alpha: 0.5),
+                          ),
+                          onPressed: () {
+                            final current = video.value.position;
+                            final duration = video.value.duration;
+                            final newPosition = current + const Duration(seconds: 10);
+                            video.seekTo(newPosition > duration ? duration : newPosition);
+                          },
+                          icon: const Icon(LucideIcons.fastForward, size: 20),
+                          tooltip: 'Avançar 10s',
                         ),
                         const SizedBox(width: 12),
                         Expanded(

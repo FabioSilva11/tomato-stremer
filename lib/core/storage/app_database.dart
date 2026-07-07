@@ -339,6 +339,18 @@ class AppDatabase {
     return rows.isEmpty ? null : rows.first['value']?.toString();
   }
 
+  Future<String?> loadMeta(String key) {
+    return _getMeta(key);
+  }
+
+  Future<void> saveMeta(String key, String value) async {
+    final db = await _db;
+    await db.insert('meta', {
+      'key': key,
+      'value': value,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
   Future<void> close() async {
     final db = _database;
     _database = null;

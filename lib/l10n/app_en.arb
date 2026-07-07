@@ -1,0 +1,65 @@
+{
+  "@@locale": "en",
+  "appName": "Tomato",
+  "home": "Home",
+  "search": "Search",
+  "library": "Library",
+  "favorites": "Favorites",
+  "history": "History",
+  "notifications": "Notifications",
+  "watchNow": "Watch Now",
+  "continueWatching": "Continue Watching",
+  "newEpisodes": "New Episodes",
+  "trending": "Trending",
+  "mostPopular": "Most Popular",
+  "season": "Season",
+  "episode": "Episode",
+  "episodes": "Episodes",
+  "dubbed": "Dubbed",
+  "subtitled": "Subtitled",
+  "play": "Play",
+  "pause": "Pause",
+  "nextEpisode": "Next Episode",
+  "previousEpisode": "Previous Episode",
+  "quality": "Quality",
+  "addToFavorites": "Add to Favorites",
+  "removeFromFavorites": "Remove from Favorites",
+  "clearHistory": "Clear History",
+  "noResults": "No results found",
+  "searchHint": "Search for anime...",
+  "loading": "Loading...",
+  "error": "Error",
+  "tryAgain": "Try Again",
+  "serverMaintenance": "Server under maintenance. Please try again later.",
+  "adTitle": "Advertisement",
+  "adMessage": "Watch a short ad to continue watching for free.",
+  "cancel": "Cancel",
+  "continue": "Continue",
+  "skip": "Skip",
+  "rewind10": "Rewind 10s",
+  "forward10": "Forward 10s",
+  "rotateScreen": "Rotate Screen",
+  "backToPortrait": "Back to Portrait",
+  "newEpisodeAvailable": "New episode available",
+  "episodeNotification": "{animeName} - {episodeName}",
+  "@episodeNotification": {
+    "placeholders": {
+      "animeName": {
+        "type": "String"
+      },
+      "episodeName": {
+        "type": "String"
+      }
+    }
+  },
+  "videosWatched": "Videos watched since last ad: {count}",
+  "@videosWatched": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "useLightTheme": "Use light theme",
+  "useDarkTheme": "Use dark theme"
+}

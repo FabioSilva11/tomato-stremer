@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/ads/ad_manager.dart';
 import '../../core/models/feed_models.dart';
 import '../../core/state/app_controller.dart';
 import '../../core/state/theme_controller.dart';
@@ -86,6 +87,13 @@ class HomePage extends StatelessWidget {
               )
             else
               ..._buildFeed(context, feed.sections),
+            // Banner de anúncio
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+                child: AdBannerWidget(),
+              ),
+            ),
             const SliverToBoxAdapter(child: SizedBox(height: 28)),
           ],
         ),
@@ -343,6 +351,58 @@ class _EpisodeRow extends StatelessWidget {
 
   final FeedSection section;
 
+  Future<void> _playEpisodeWithAd(BuildContext context, FeedItem item) async {
+    final adManager = AdManager();
+    
+    // Adicionar ao histórico
+    await context.read<AppController>().addFeedHistory(item);
+    
+    // Verificar se deve mostrar anúncio
+    if (adManager.shouldShowAd() && context.mounted) {
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Anúncio'),
+          content: const Text(
+            'Assista a um pequeno anúncio para continuar assistindo gratuitamente.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Voltar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Continuar'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldContinue != true || !context.mounted) return;
+
+      // Mostrar anúncio (com fallback automático)
+      await adManager.showRewardedAd(
+        onAdWatched: () {
+          print('✅ Anúncio assistido');
+        },
+      );
+
+      if (!context.mounted) return;
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+
+    // Navegar para player
+    if (context.mounted) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PlayerPage(episodeId: item.episodeId!),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return _SectionShell(
@@ -359,16 +419,7 @@ class _EpisodeRow extends StatelessWidget {
             return GestureDetector(
               onTap: item.episodeId == null
                   ? () => _openAnime(context, item.animeId)
-                  : () async {
-                      await context.read<AppController>().addFeedHistory(item);
-                      if (!context.mounted) return;
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              PlayerPage(episodeId: item.episodeId!),
-                        ),
-                      );
-                    },
+                  : () => _playEpisodeWithAd(context, item),
               child: SizedBox(
                 width: 246,
                 child: Column(
