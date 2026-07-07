@@ -23,7 +23,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   webview_flutter: ^4.13.1
-  google_mobile_ads: ^5.1.0
+  google_mobile_ads: 5.1.0
   unity_ads_plugin: ^0.3.16
 
   # Criptografia e segurança

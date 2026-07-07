@@ -44,8 +44,7 @@ jobs:
         run: flutter gen-l10n
 
       - name: Analyze code
-        run: flutter analyze
-        continue-on-error: true
+        run: flutter analyze --no-fatal-infos
 
       - name: Run tests
         run: flutter test --coverage

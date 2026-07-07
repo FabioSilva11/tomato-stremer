@@ -3,3 +3,5 @@ include: package:flutter_lints/flutter.yaml
 linter:
   rules:
     prefer_single_quotes: true
+    # Permitir print em código de debug/desenvolvimento
+    avoid_print: false
