@@ -205,7 +205,9 @@ class AdManager {
   }
 
   /// Carrega banner do AdMob
-  Future<BannerAd?> loadAdMobBanner() async {
+  Future<void> loadAdMobBanner() async {
+    // Temporariamente desabilitado
+    /*
     if (_admobBannerAd != null) return _admobBannerAd;
 
     try {
@@ -232,6 +234,8 @@ class AdManager {
       print('❌ Exceção ao carregar AdMob banner: $e');
       return null;
     }
+    */
+    print('⚠️ AdMob banner temporariamente desabilitado');
   }
 
   /// Seleciona a melhor plataforma baseada em performance
@@ -304,7 +308,8 @@ class AdManager {
 
     // Tentar plataforma principal
     if (_currentPlatform == AdPlatform.admob && _admobAvailable) {
-      success = await _showAdMobRewardedAd(onAdWatched: onAdWatched);
+      // success = await _showAdMobRewardedAd(onAdWatched: onAdWatched);  // Temporariamente desabilitado
+      success = false;  // Forçar falso para usar Unity como fallback
     } else if (_currentPlatform == AdPlatform.unity && _unityAvailable) {
       success = await _showUnityRewardedAd(onAdWatched: onAdWatched);
     }
@@ -316,7 +321,8 @@ class AdManager {
       if (_currentPlatform == AdPlatform.admob && _unityAvailable) {
         success = await _showUnityRewardedAd(onAdWatched: onAdWatched);
       } else if (_currentPlatform == AdPlatform.unity && _admobAvailable) {
-        success = await _showAdMobRewardedAd(onAdWatched: onAdWatched);
+        // success = await _showAdMobRewardedAd(onAdWatched: onAdWatched);  // Temporariamente desabilitado
+        success = false;
       }
     }
 
@@ -329,6 +335,8 @@ class AdManager {
 
   /// Mostra anúncio premiado do AdMob
   Future<bool> _showAdMobRewardedAd({required Function() onAdWatched}) async {
+    // Temporariamente desabilitado
+    /*
     final ad = _admobRewardedAd;
     if (ad == null || !_isRewardedAdReady) {
       print('❌ AdMob ad não está pronto');
@@ -352,6 +360,9 @@ class AdManager {
       _admobFailCount++;
       return false;
     }
+    */
+    print('⚠️ AdMob ads temporariamente desabilitados');
+    return false;
   }
 
   /// Mostra anúncio premiado do Unity
@@ -428,10 +439,13 @@ class AdManager {
 
   /// Limpa recursos
   void dispose() {
+    // Temporariamente comentado
+    /*
     _admobRewardedAd?.dispose();
     _admobBannerAd?.dispose();
     _admobRewardedAd = null;
     _admobBannerAd = null;
+    */
     _isRewardedAdReady = false;
   }
 }
@@ -445,7 +459,7 @@ class AdBannerWidget extends StatefulWidget {
 }
 
 class _AdBannerWidgetState extends State<AdBannerWidget> {
-  BannerAd? _bannerAd;
+  // BannerAd? _bannerAd;  // Temporariamente comentado
   bool _isLoaded = false;
   bool _showUnityBanner = false;
 
@@ -456,7 +470,8 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
   }
 
   Future<void> _loadBanner() async {
-    // Tentar carregar AdMob primeiro
+    // Temporariamente desabilitado AdMob - usar apenas Unity
+    /*
     final banner = await AdManager().loadAdMobBanner();
 
     if (banner != null && mounted) {
@@ -470,11 +485,17 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
         _showUnityBanner = true;
       });
     }
+    */
+    
+    // Por enquanto, usar apenas Unity Banner
+    setState(() {
+      _showUnityBanner = true;
+    });
   }
 
   @override
   void dispose() {
-    _bannerAd?.dispose();
+    // _bannerAd?.dispose();  // Temporariamente comentado
     super.dispose();
   }
 
@@ -489,6 +510,13 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
       );
     }
 
+    // Temporariamente apenas Unity ou loading
+    return const SizedBox(
+      height: 50,
+      child: Center(child: CircularProgressIndicator()),
+    );
+    
+    /*
     if (!_isLoaded || _bannerAd == null) {
       return const SizedBox(
         height: 50,
@@ -502,5 +530,6 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
       height: _bannerAd!.size.height.toDouble(),
       child: AdWidget(ad: _bannerAd!),
     );
+    */
   }
 }

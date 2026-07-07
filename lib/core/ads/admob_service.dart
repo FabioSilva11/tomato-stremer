@@ -1,3 +1,5 @@
+// Temporariamente desabilitado - todo o arquivo comentado até resolvermos a compatibilidade
+/*
 import 'dart:async';
 
 import 'package:google_mobile_ads/google_mobile_ads.dart';
