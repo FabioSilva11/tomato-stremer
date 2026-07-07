@@ -88,6 +88,9 @@ app.*.map.json
 # Web related
 lib/generated_plugin_registrant.dart
 
+# Generated localization files
+lib/gen_l10n/
+
 # Symbolication related
 app.*.symbols
 

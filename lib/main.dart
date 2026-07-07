@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
+import 'gen_l10n/app_localizations.dart';
 import 'core/ads/ad_manager.dart';
 import 'core/api/streambert_api.dart';
 import 'core/api/tomato_api.dart';
