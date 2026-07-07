@@ -8,20 +8,22 @@ echo.
 echo Escolha uma opcao:
 echo.
 echo [1] Inicializar repositorio e fazer primeiro commit
-echo [2] Criar tag e release (v1.0.0)
-echo [3] Atualizar versao e criar nova release
-echo [4] Ver status do repositorio
-echo [5] Ver log de commits
-echo [6] Sair
+echo [2] Commit das correcoes e push
+echo [3] Criar tag e release (v1.0.0)
+echo [4] Atualizar versao e criar nova release
+echo [5] Ver status do repositorio
+echo [6] Ver log de commits
+echo [7] Sair
 echo.
 set /p choice="Digite o numero: "
 
 if "%choice%"=="1" goto init
-if "%choice%"=="2" goto first_release
-if "%choice%"=="3" goto new_release
-if "%choice%"=="4" goto status
-if "%choice%"=="5" goto log
-if "%choice%"=="6" goto end
+if "%choice%"=="2" goto commit_fix
+if "%choice%"=="3" goto first_release
+if "%choice%"=="4" goto new_release
+if "%choice%"=="5" goto status
+if "%choice%"=="6" goto log
+if "%choice%"=="7" goto end
 goto menu
 
 :init
@@ -39,13 +41,36 @@ echo.
 pause
 goto menu
 
+:commit_fix
+echo.
+echo [Commitando correcoes...]
+git add .
+git commit -m "fix: ajustar versão minima do Dart SDK para 3.5.0"
+git push origin main
+echo.
+echo Correcoes enviadas!
+echo.
+pause
+goto menu
+
 :first_release
 echo.
 echo [Criando primeira release v1.0.0...]
-git tag -a v1.0.0 -m "🎉 Release v1.0.0 - Primeira versão oficial"
+git tag -a v1.0.0 -m "🎉 Release v1.0.0 - Primeira versão oficial
+
+Funcionalidades:
+- Sistema de anúncios com redundância (AdMob + Unity Ads)
+- Criptografia AES-256 e ofuscação ProGuard
+- Notificações de novos episódios
+- Player com controles avançados (±10 segundos)
+- Suporte a Português e Inglês
+- Banners discretos
+- GitHub Actions CI/CD configurado"
+
 git push origin v1.0.0
 echo.
-echo Release v1.0.0 criada! Verifique em GitHub Actions.
+echo Release v1.0.0 criada! 
+echo Verifique o progresso em: https://github.com/SEU_USUARIO/tomato_streaming/actions
 echo.
 pause
 goto menu
