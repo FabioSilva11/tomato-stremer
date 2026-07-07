@@ -5,13 +5,14 @@ publish_to: "none"
 version: 0.1.0+1
 
 environment:
-  sdk: '>=3.5.0 <4.0.0'
+  sdk: ">=3.6.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+
   intl: any
   provider: ^6.0.5
   http: ^1.5.0
@@ -20,16 +21,18 @@ dependencies:
   sqflite: ^2.4.2
   video_player: ^2.9.2
   cupertino_icons: ^1.0.8
+
   webview_flutter: ^4.13.1
   google_mobile_ads: ^5.2.0
   unity_ads_plugin: ^0.3.16
+
   # Criptografia e segurança
   flutter_secure_storage: ^9.2.2
   encrypt: ^5.0.3
+
   # Notificações
   flutter_local_notifications: ^18.0.1
   workmanager: ^0.5.2
-
 
 dev_dependencies:
   flutter_test:
@@ -39,6 +42,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+
   assets:
     - assets/app_icon.png
     - assets/icons/
