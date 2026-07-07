@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'core/ads/ad_manager.dart';
 import 'core/api/streambert_api.dart';
@@ -12,7 +13,6 @@ import 'core/state/theme_controller.dart';
 import 'core/storage/app_database.dart';
 import 'features/app_shell.dart';
 import 'theme/app_theme.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

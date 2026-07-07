@@ -216,7 +216,7 @@ Future<void> _checkForNewEpisodes() async {
     final notifications = await database.loadNotifications();
     
     // Filtrar apenas notificações não lidas
-    final unread = notifications.where((n) => !n.isRead).toList();
+    final unread = notifications.where((n) => n.unread).toList();
     
     if (unread.isEmpty) return;
 
@@ -267,7 +267,7 @@ class FavoriteEpisodesNotifier {
     // Carregar notificações não lidas
     final notifications = await _database.loadNotifications();
     final unreadNotifications = notifications
-        .where((n) => !n.isRead && favoriteIds.contains(n.animeId))
+        .where((n) => n.unread && favoriteIds.contains(n.animeId))
         .toList();
 
     // Mostrar notificações

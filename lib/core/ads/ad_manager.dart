@@ -499,7 +499,6 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
         onLoad: (placementId) => print('Unity banner carregado: $placementId'),
         onFailed: (placementId, error, message) =>
             print('Unity banner erro: $error - $message'),
-        onClicked: (placementId) => print('Unity banner clicado'),
       );
     }
 
