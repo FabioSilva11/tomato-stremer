@@ -207,12 +207,8 @@ class _PlayerPageState extends State<PlayerPage> {
         },
       );
 
-      if (adShown && !mounted) return;
-      
-      // Pequeno delay após anúncio
-      if (adShown) {
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
+      if (!adShown || !mounted) return;
+      await Future.delayed(const Duration(milliseconds: 500));
     }
 
     // Carregar próximo episódio

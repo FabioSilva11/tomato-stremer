@@ -383,13 +383,13 @@ class _EpisodeRow extends StatelessWidget {
       if (shouldContinue != true || !context.mounted) return;
 
       // Mostrar anúncio (com fallback automático)
-      await adManager.showRewardedAd(
+      final adShown = await adManager.showRewardedAd(
         onAdWatched: () {
           print('✅ Anúncio assistido');
         },
       );
 
-      if (!context.mounted) return;
+      if (!adShown || !context.mounted) return;
       await Future.delayed(const Duration(milliseconds: 500));
     }
 

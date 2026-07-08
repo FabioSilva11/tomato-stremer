@@ -27,8 +27,8 @@ class AdManager {
 
   // ============= IDs DO ADMOB (PRODUÇÃO) =============
   // App ID: ca-app-pub-6598765502914364~1736433666
-  static const String _admobRewardedId = 'ca-app-pub-6598765502914364/1896215768';
-  static const String _admobBannerId = 'ca-app-pub-6598765502914364/2213698978';
+  // static const String _admobRewardedId = 'ca-app-pub-6598765502914364/1896215768';
+  // static const String _admobBannerId = 'ca-app-pub-6598765502914364/2213698978';
 
   // ============= IDs DO UNITY ADS (PRODUÇÃO) =============
   static const String _unityGameIdAndroid = '5740617';
@@ -42,9 +42,9 @@ class AdManager {
   AdPlatform _currentPlatform = AdPlatform.admob;
   
   // Controle de rotação
-  int _admobSuccessCount = 0;
+  final int _admobSuccessCount = 0;
   int _unitySuccessCount = 0;
-  int _admobFailCount = 0;
+  final int _admobFailCount = 0;
   int _unityFailCount = 0;
   
   // Cache de anúncios
@@ -130,58 +130,58 @@ class AdManager {
     }
   }
 
-  /// Carrega anúncio premiado do AdMob
-  Future<void> _loadAdMobRewardedAd() async {
-    // Temporariamente desabilitado
-    /*
-    if (_admobRewardedAd != null) return;
+  // /// Carrega anúncio premiado do AdMob
+  // Future<void> _loadAdMobRewardedAd() async {
+  //   // Temporariamente desabilitado
+  //   /*
+  //   if (_admobRewardedAd != null) return;
 
-    try {
-      await RewardedAd.load(
-        adUnitId: _admobRewardedId,
-        request: const AdRequest(),
-        rewardedAdLoadCallback: RewardedAdLoadCallback(
-          onAdLoaded: (ad) {
-            _admobRewardedAd = ad;
-            _isRewardedAdReady = true;
-            _admobSuccessCount++;
-            print('✅ AdMob rewarded ad carregado');
+  //   try {
+  //     await RewardedAd.load(
+  //       adUnitId: _admobRewardedId,
+  //       request: const AdRequest(),
+  //       rewardedAdLoadCallback: RewardedAdLoadCallback(
+  //         onAdLoaded: (ad) {
+  //           _admobRewardedAd = ad;
+  //           _isRewardedAdReady = true;
+  //           _admobSuccessCount++;
+  //           print('✅ AdMob rewarded ad carregado');
             
-            _admobRewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-              onAdDismissedFullScreenContent: (ad) {
-                ad.dispose();
-                _admobRewardedAd = null;
-                _isRewardedAdReady = false;
-                _loadAdMobRewardedAd();
-              },
-              onAdFailedToShowFullScreenContent: (ad, error) {
-                print('❌ Erro ao exibir AdMob ad: $error');
-                ad.dispose();
-                _admobRewardedAd = null;
-                _isRewardedAdReady = false;
-                _admobFailCount++;
-                _loadAdMobRewardedAd();
-              },
-            );
-          },
-          onAdFailedToLoad: (error) {
-            print('❌ Erro ao carregar AdMob rewarded ad: $error');
-            _isRewardedAdReady = false;
-            _admobFailCount++;
+  //           _admobRewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+  //             onAdDismissedFullScreenContent: (ad) {
+  //               ad.dispose();
+  //               _admobRewardedAd = null;
+  //               _isRewardedAdReady = false;
+  //               _loadAdMobRewardedAd();
+  //             },
+  //             onAdFailedToShowFullScreenContent: (ad, error) {
+  //               print('❌ Erro ao exibir AdMob ad: $error');
+  //               ad.dispose();
+  //               _admobRewardedAd = null;
+  //               _isRewardedAdReady = false;
+  //               _admobFailCount++;
+  //               _loadAdMobRewardedAd();
+  //             },
+  //           );
+  //         },
+  //         onAdFailedToLoad: (error) {
+  //           print('❌ Erro ao carregar AdMob rewarded ad: $error');
+  //           _isRewardedAdReady = false;
+  //           _admobFailCount++;
             
-            Future.delayed(const Duration(seconds: 30), () {
-              _loadAdMobRewardedAd();
-            });
-          },
-        ),
-      );
-    } catch (e) {
-      print('❌ Exceção ao carregar AdMob ad: $e');
-      _admobFailCount++;
-    }
-    */
-    print('⚠️ AdMob ads temporariamente desabilitados');
-  }
+  //           Future.delayed(const Duration(seconds: 30), () {
+  //             _loadAdMobRewardedAd();
+  //           });
+  //         },
+  //       ),
+  //     );
+  //   } catch (e) {
+  //     print('❌ Exceção ao carregar AdMob ad: $e');
+  //     _admobFailCount++;
+  //   }
+  //   */
+  //   print('⚠️ AdMob ads temporariamente desabilitados');
+  // }
 
   /// Carrega anúncio premiado do Unity
   void _loadUnityRewardedAd() {
@@ -333,37 +333,37 @@ class AdManager {
     return success;
   }
 
-  /// Mostra anúncio premiado do AdMob
-  Future<bool> _showAdMobRewardedAd({required Function() onAdWatched}) async {
-    // Temporariamente desabilitado
-    /*
-    final ad = _admobRewardedAd;
-    if (ad == null || !_isRewardedAdReady) {
-      print('❌ AdMob ad não está pronto');
-      _admobFailCount++;
-      return false;
-    }
+  // /// Mostra anúncio premiado do AdMob
+  // Future<bool> _showAdMobRewardedAd({required Function() onAdWatched}) async {
+  //   // Temporariamente desabilitado
+  //   /*
+  //   final ad = _admobRewardedAd;
+  //   if (ad == null || !_isRewardedAdReady) {
+  //     print('❌ AdMob ad não está pronto');
+  //     _admobFailCount++;
+  //     return false;
+  //   }
 
-    try {
-      await ad.show(
-        onUserEarnedReward: (ad, reward) {
-          print('✅ Usuário assistiu AdMob ad completo');
-          _lastAdShown = DateTime.now();
-          _videosWatchedCount = 0;
-          _admobSuccessCount++;
-          onAdWatched();
-        },
-      );
-      return true;
-    } catch (e) {
-      print('❌ Erro ao exibir AdMob ad: $e');
-      _admobFailCount++;
-      return false;
-    }
-    */
-    print('⚠️ AdMob ads temporariamente desabilitados');
-    return false;
-  }
+  //   try {
+  //     await ad.show(
+  //       onUserEarnedReward: (ad, reward) {
+  //         print('✅ Usuário assistiu AdMob ad completo');
+  //         _lastAdShown = DateTime.now();
+  //         _videosWatchedCount = 0;
+  //         _admobSuccessCount++;
+  //         onAdWatched();
+  //       },
+  //     );
+  //     return true;
+  //   } catch (e) {
+  //     print('❌ Erro ao exibir AdMob ad: $e');
+  //     _admobFailCount++;
+  //     return false;
+  //   }
+  //   */
+  //   print('⚠️ AdMob ads temporariamente desabilitados');
+  //   return false;
+  // }
 
   /// Mostra anúncio premiado do Unity
   Future<bool> _showUnityRewardedAd({required Function() onAdWatched}) async {
@@ -460,7 +460,7 @@ class AdBannerWidget extends StatefulWidget {
 
 class _AdBannerWidgetState extends State<AdBannerWidget> {
   // BannerAd? _bannerAd;  // Temporariamente comentado
-  bool _isLoaded = false;
+  // bool _isLoaded = false;
   bool _showUnityBanner = false;
 
   @override
