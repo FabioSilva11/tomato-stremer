@@ -9,6 +9,9 @@
 -keep class io.flutter.**  { *; }
 -keep class io.flutter.plugins.**  { *; }
 
+# Manter MainActivity e classes do app
+-keep class com.tomato.streaming.** { *; }
+
 # Manter classes nativas
 -keepclasseswithmembernames class * {
     native <methods>;
