@@ -24,7 +24,7 @@ dependencies:
 
   webview_flutter: ^4.13.1
   # google_mobile_ads: 5.0.0  # Temporariamente removido para testar build
-  unity_ads_plugin: ^0.3.16
+  unity_ads_plugin: ^0.4.0
 
   # Notificações
   flutter_local_notifications: ^18.0.1
