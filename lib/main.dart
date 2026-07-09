@@ -7,7 +7,6 @@ import 'core/ads/ad_manager.dart';
 import 'core/api/streambert_api.dart';
 import 'core/api/tomato_api.dart';
 import 'core/notifications/notification_service.dart';
-import 'core/security/security_manager.dart';
 import 'core/state/app_controller.dart';
 import 'core/state/theme_controller.dart';
 import 'core/storage/app_database.dart';
@@ -16,9 +15,6 @@ import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Inicializar Segurança e Criptografia
-  await SecurityManager().initialize();
   
   // Inicializar gerenciador de anúncios (AdMob + Unity Ads)
   // PRODUÇÃO: useTestAds: false

@@ -67,27 +67,6 @@
 -keep class androidx.core.app.NotificationCompat { *; }
 -keep class com.dexterous.** { *; }
 
-# Encrypt library
--keep class org.bouncycastle.** { *; }
--keep class javax.crypto.** { *; }
-
 # Remover atributos de debug
 -renamesourcefileattribute SourceFile
 -keepattributes SourceFile,LineNumberTable
-
-# String encryption (nível adicional)
--adaptresourcefilenames **.properties,**.xml,**.json
--adaptresourcefilecontents **.properties,META-INF/MANIFEST.MF
-
-# Proteger contra reflection attacks
--keepattributes *Annotation*
--keepattributes EnclosingMethod
--keepattributes InnerClasses
-
-# Ofuscação de recursos
--adaptresourcefilenames
--adaptresourcefilecontents **.xml
-
-# Anti-tampering
--dontskipnonpubliclibraryclasses
--dontskipnonpubliclibraryclassmembers

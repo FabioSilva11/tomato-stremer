@@ -26,10 +26,6 @@ dependencies:
   # google_mobile_ads: 5.0.0  # Temporariamente removido para testar build
   unity_ads_plugin: ^0.3.16
 
-  # Criptografia e segurança
-  flutter_secure_storage: ^9.2.2
-  encrypt: ^5.0.3
-
   # Notificações
   flutter_local_notifications: ^18.0.1
   workmanager: ^0.9.0
