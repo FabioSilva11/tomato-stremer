@@ -1,34 +1,24 @@
 import 'package:flutter/foundation.dart';
 
-import '../api/streambert_api.dart';
 import '../api/tomato_api.dart';
 import '../models/anime_models.dart';
 import '../models/feed_models.dart';
 import '../models/library_models.dart';
-import '../models/streambert_models.dart';
 import '../storage/app_database.dart';
 
 class AppController extends ChangeNotifier {
   AppController({
     required TomatoApi api,
-    required StreambertApi streambertApi,
     required AppDatabase database,
-  }) : _api = api,
-       _streambertApi = streambertApi,
-       _database = database;
+  })  : _api = api,
+        _database = database;
 
   final TomatoApi _api;
-  final StreambertApi _streambertApi;
   final AppDatabase _database;
-  static const String _tmdbTokenKey = 'tmdb_read_token';
 
   bool loading = false;
-  bool streambertLoading = false;
   String? error;
-  String? streambertError;
   FeedResponse? feed;
-  StreambertCatalog? streambertCatalog;
-  String tmdbToken = StreambertApi.defaultToken;
   List<SavedAnime> favorites = const [];
   List<WatchHistoryEntry> history = const [];
   List<EpisodeNotification> notifications = const [];
@@ -41,14 +31,11 @@ class AppController extends ChangeNotifier {
       history.map((entry) => entry.episodeId).toSet();
 
   Map<int, WatchHistoryEntry> get historyByEpisode => {
-    for (final entry in history) entry.episodeId: entry,
-  };
-
-  bool get hasTmdbToken => tmdbToken.trim().isNotEmpty;
+        for (final entry in history) entry.episodeId: entry,
+      };
 
   Future<void> initialize() async {
     await loadLibrary();
-    await loadTmdbToken();
     await loadHome();
   }
 
@@ -66,44 +53,6 @@ class AppController extends ChangeNotifier {
       error = e.toString();
     } finally {
       loading = false;
-      notifyListeners();
-    }
-    if (hasTmdbToken) {
-      await loadStreambertCatalog();
-    }
-  }
-
-  Future<void> loadTmdbToken() async {
-    final stored = await _database.loadMeta(_tmdbTokenKey);
-    final clean = StreambertApi.cleanToken(stored ?? '');
-    if (clean.isNotEmpty) {
-      tmdbToken = clean;
-    }
-  }
-
-  Future<void> saveTmdbToken(String token) async {
-    final clean = StreambertApi.cleanToken(token);
-    tmdbToken = clean;
-    streambertError = null;
-    streambertCatalog = null;
-    await _database.saveMeta(_tmdbTokenKey, clean);
-    notifyListeners();
-    if (clean.isNotEmpty) {
-      await loadStreambertCatalog();
-    }
-  }
-
-  Future<void> loadStreambertCatalog({bool notify = true}) async {
-    if (!hasTmdbToken) return;
-    streambertLoading = true;
-    streambertError = null;
-    if (notify) notifyListeners();
-    try {
-      streambertCatalog = await _streambertApi.fetchCatalog(tmdbToken);
-    } catch (error) {
-      streambertError = error.toString();
-    } finally {
-      streambertLoading = false;
       notifyListeners();
     }
   }
@@ -202,9 +151,8 @@ class AppController extends ChangeNotifier {
     if (missingIds.isEmpty) return source;
 
     final titles = await _database.loadAnimeTitles(missingIds);
-    final uncachedIds = missingIds
-        .where((id) => !titles.containsKey(id))
-        .toList();
+    final uncachedIds =
+        missingIds.where((id) => !titles.containsKey(id)).toList();
     final loadedTitles = await _loadMissingTitles(uncachedIds);
     final resolvedTitles = {...titles, ...loadedTitles};
 
@@ -239,9 +187,8 @@ class AppController extends ChangeNotifier {
         final id = animeIds[cursor++];
         try {
           final anime = await _api.fetchAnime(id);
-          final image = anime.capeUrl.isNotEmpty
-              ? anime.capeUrl
-              : anime.coverUrl;
+          final image =
+              anime.capeUrl.isNotEmpty ? anime.capeUrl : anime.coverUrl;
           if (anime.name.trim().isEmpty) continue;
           titles[id] = anime.name;
           await _database.saveAnimeTitle(

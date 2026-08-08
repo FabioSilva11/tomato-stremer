@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_chrome_cast/cast_context.dart';
+import 'package:flutter_chrome_cast/discovery.dart';
+import 'package:flutter_chrome_cast/entities.dart';
+import 'package:flutter_chrome_cast/models.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'gen_l10n/app_localizations.dart';
-import 'core/ads/ad_manager.dart';
-import 'core/api/streambert_api.dart';
 import 'core/api/tomato_api.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/state/app_controller.dart';
@@ -15,17 +17,21 @@ import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Inicializar gerenciador de anúncios (AdMob + Unity Ads)
-  // PRODUÇÃO: useTestAds: false
-  await AdManager().initialize(useTestAds: false);
-  
+
+  GoogleCastContext.instance.setSharedInstanceWithOptions(
+    GoogleCastOptionsAndroid(
+      appId: GoogleCastDiscoveryCriteria.kDefaultApplicationId,
+      stopCastingOnAppTerminated: false,
+    ),
+  );
+  GoogleCastDiscoveryManager.instance.startDiscovery();
+
   // Inicializar Notificações
   await NotificationService().initialize();
-  
+
   // Inicializar Worker de Background
   await EpisodeCheckService.initialize();
-  
+
   runApp(const TomatoStreamingApp());
 }
 
@@ -41,10 +47,6 @@ class TomatoStreamingApp extends StatelessWidget {
           dispose: (_, api) => api.dispose(),
         ),
         Provider(
-          create: (_) => StreambertApi(),
-          dispose: (_, api) => api.dispose(),
-        ),
-        Provider(
           create: (_) => AppDatabase(),
           dispose: (_, database) {
             database.close();
@@ -53,7 +55,6 @@ class TomatoStreamingApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (context) => AppController(
             api: context.read<TomatoApi>(),
-            streambertApi: context.read<StreambertApi>(),
             database: context.read<AppDatabase>(),
           )..initialize(),
         ),
@@ -64,7 +65,7 @@ class TomatoStreamingApp extends StatelessWidget {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'Tomato',
-            
+
             // Internacionalização
             localizationsDelegates: const [
               AppLocalizations.delegate,
@@ -76,7 +77,7 @@ class TomatoStreamingApp extends StatelessWidget {
               Locale('en', ''), // English
               Locale('pt', ''), // Portuguese
             ],
-            
+
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: themeController.mode,

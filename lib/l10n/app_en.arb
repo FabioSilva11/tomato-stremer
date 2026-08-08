@@ -31,8 +31,6 @@
   "error": "Error",
   "tryAgain": "Try Again",
   "serverMaintenance": "Server under maintenance. Please try again later.",
-  "adTitle": "Advertisement",
-  "adMessage": "Watch a short ad to continue watching for free.",
   "cancel": "Cancel",
   "continueButton": "Continue",
   "skip": "Skip",
@@ -49,14 +47,6 @@
       },
       "episodeName": {
         "type": "String"
-      }
-    }
-  },
-  "videosWatched": "Videos watched since last ad: {count}",
-  "@videosWatched": {
-    "placeholders": {
-      "count": {
-        "type": "int"
       }
     }
   },

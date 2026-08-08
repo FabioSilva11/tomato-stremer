@@ -31,8 +31,6 @@
   "error": "Erro",
   "tryAgain": "Tentar Novamente",
   "serverMaintenance": "Servidor em manutenção. Tente voltar mais tarde.",
-  "adTitle": "Anúncio",
-  "adMessage": "Assista a um pequeno anúncio para continuar assistindo gratuitamente.",
   "cancel": "Cancelar",
   "continueButton": "Continuar",
   "skip": "Pular",
@@ -49,14 +47,6 @@
       },
       "episodeName": {
         "type": "String"
-      }
-    }
-  },
-  "videosWatched": "Vídeos assistidos desde último anúncio: {count}",
-  "@videosWatched": {
-    "placeholders": {
-      "count": {
-        "type": "int"
       }
     }
   },

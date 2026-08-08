@@ -59,10 +59,6 @@
     public <init>(...);
 }
 
-# Manter AdMob
--keep class com.google.android.gms.ads.** { *; }
--keep class com.google.ads.** { *; }
-
 # Manter Notificações
 -keep class androidx.core.app.NotificationCompat { *; }
 -keep class com.dexterous.** { *; }

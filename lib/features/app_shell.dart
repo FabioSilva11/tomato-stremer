@@ -8,7 +8,6 @@ import 'library/favorites_page.dart';
 import 'library/history_page.dart';
 import 'library/notifications_page.dart';
 import 'search/search_page.dart';
-import 'streambert/streambert_catalog_page.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -31,7 +30,6 @@ class _AppShellState extends State<AppShell> {
         children: [
           HomePage(onOpenSearch: () => _select(1)),
           const SearchPage(showBackButton: false),
-          const StreambertCatalogPage(),
           const FavoritesPage(),
           const HistoryPage(),
           const NotificationsPage(),
@@ -49,10 +47,6 @@ class _AppShellState extends State<AppShell> {
           const NavigationDestination(
             icon: Icon(LucideIcons.search),
             label: 'Busca',
-          ),
-          const NavigationDestination(
-            icon: Icon(LucideIcons.film),
-            label: 'Stream',
           ),
           const NavigationDestination(
             icon: Icon(LucideIcons.heart),

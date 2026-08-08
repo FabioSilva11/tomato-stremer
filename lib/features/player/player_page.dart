@@ -2,11 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_chrome_cast/discovery.dart';
+import 'package:flutter_chrome_cast/entities.dart';
+import 'package:flutter_chrome_cast/enums.dart';
+import 'package:flutter_chrome_cast/media.dart';
+import 'package:flutter_chrome_cast/session.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
-import '../../core/ads/ad_manager.dart';
 import '../../core/api/tomato_api.dart';
 import '../../core/models/anime_models.dart';
 import '../../core/state/app_controller.dart';
@@ -22,6 +26,7 @@ class PlayerPage extends StatefulWidget {
 }
 
 class _PlayerPageState extends State<PlayerPage> {
+  static const _pipChannel = MethodChannel('tomato.streaming/pip');
   Future<EpisodeStream>? _streamFuture;
   VideoPlayerController? _video;
   AppController? _appController;
@@ -30,11 +35,21 @@ class _PlayerPageState extends State<PlayerPage> {
   Duration _lastSavedPosition = Duration.zero;
   bool _showControls = true;
   bool _landscape = false;
-  final AdManager _adManager = AdManager();
-
+  bool _castActive = false;
+  bool _remotePlaying = false;
+  bool _fullscreen = false;
+  Timer? _controlsTimer;
   @override
   void initState() {
     super.initState();
+    _pipChannel.setMethodCallHandler((call) async {
+      if (call.method == 'pipChanged' && mounted) {
+        final inPip = call.arguments is Map && call.arguments['inPip'] == true;
+        setState(() => _showControls = !inPip);
+      }
+    });
+    _pipChannel.invokeMethod<void>('setEnabled', {'enabled': true});
+    _scheduleControlsHide();
     _load(widget.episodeId);
   }
 
@@ -93,8 +108,7 @@ class _PlayerPageState extends State<PlayerPage> {
     final video = VideoPlayerController.networkUrl(Uri.parse(url));
     setState(() => _video = video);
     await video.initialize();
-    final canResume =
-        position > const Duration(seconds: 5) &&
+    final canResume = position > const Duration(seconds: 5) &&
         position < video.value.duration - const Duration(seconds: 8);
     if (canResume) {
       await video.seekTo(position);
@@ -103,6 +117,10 @@ class _PlayerPageState extends State<PlayerPage> {
     video.addListener(_handleVideoTick);
     if (startPlaying) {
       await video.play();
+      if (mounted) {
+        setState(() => _showControls = false);
+        _scheduleControlsHide();
+      }
     }
     if (mounted) setState(() {});
   }
@@ -120,13 +138,12 @@ class _PlayerPageState extends State<PlayerPage> {
 
   @override
   void dispose() {
+    _pipChannel.invokeMethod<void>('setEnabled', {'enabled': false});
     unawaited(_persistPlayback(notify: true));
-    
-    // Incrementar contador de vídeos assistidos
-    _adManager.incrementVideoCount();
-    
+
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     _video?.dispose();
+    _controlsTimer?.cancel();
     super.dispose();
   }
 
@@ -167,54 +184,203 @@ class _PlayerPageState extends State<PlayerPage> {
     }
   }
 
-  /// Tenta mostrar anúncio antes de carregar próximo vídeo
-  Future<void> _loadNextWithAd(int nextEpisodeId) async {
-    // Verificar se deve mostrar anúncio
-    if (_adManager.shouldShowAd()) {
-      // Mostrar diálogo de preparação
-      if (!mounted) return;
-      
-      final shouldContinue = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: const Text('Anúncio'),
-          content: const Text(
-            'Assista a um pequeno anúncio para continuar assistindo gratuitamente.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Voltar'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Continuar'),
-            ),
-          ],
-        ),
-      );
-
-      if (shouldContinue != true || !mounted) return;
-
-      // Mostrar anúncio (com fallback automático entre plataformas)
-      final adShown = await _adManager.showRewardedAd(
-        onAdWatched: () {
-          print('✅ Anúncio assistido, carregando próximo episódio');
-        },
-        onAdSkipped: () {
-          print('⏭️ Anúncio pulado');
-        },
-      );
-
-      if (!adShown || !mounted) return;
-      await Future.delayed(const Duration(milliseconds: 500));
-    }
-
-    // Carregar próximo episódio
+  Future<void> _loadNext(int nextEpisodeId) async {
     if (mounted) {
       await _load(nextEpisodeId);
     }
+  }
+
+  Future<void> _castCurrentVideo() async {
+    final videoUrl = _video == null ? null : _currentStreamUrl;
+    if (videoUrl == null) {
+      debugPrint('[Chromecast] sem URL de vídeo disponível');
+      return;
+    }
+    debugPrint(
+        '[Chromecast] preparando envio: title=$_currentStreamTitle url=$videoUrl');
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: StreamBuilder<List<GoogleCastDevice>>(
+          stream: GoogleCastDiscoveryManager.instance.devicesStream,
+          builder: (context, snapshot) {
+            final devices = snapshot.data ?? const <GoogleCastDevice>[];
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Assistir na TV',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 8),
+                  if (devices.isEmpty)
+                    const Text(
+                        'Nenhuma TV encontrada. Xiaomi e TCL precisam estar no mesmo Wi-Fi.'),
+                  for (final device in devices)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(LucideIcons.tv),
+                      title: Text(device.friendlyName),
+                      subtitle: Text(device.modelName ?? 'Google Cast'),
+                      onTap: () async {
+                        try {
+                          debugPrint(
+                              '[Chromecast] conectando: ${device.friendlyName} (${device.modelName})');
+                          await GoogleCastSessionManager.instance
+                              .startSessionWithDevice(device);
+                          await _waitForCastReceiver();
+                          final contentType = videoUrl.contains('.m3u8')
+                              ? 'application/x-mpegURL'
+                              : 'video/mp4';
+                          debugPrint(
+                              '[Chromecast] sessão conectada; enviando contentType=$contentType');
+                          await GoogleCastRemoteMediaClient.instance.loadMedia(
+                            GoogleCastMediaInformation(
+                              contentId: videoUrl,
+                              contentUrl: Uri.parse(videoUrl),
+                              streamType: CastMediaStreamType.buffered,
+                              contentType: contentType,
+                              duration: _video?.value.duration,
+                              metadata: GoogleCastMovieMediaMetadata(
+                                  title: _currentStreamTitle),
+                            ),
+                          );
+                          debugPrint('[Chromecast] mídia enviada com sucesso');
+                          await _video?.pause();
+                          if (mounted) {
+                            setState(() {
+                              _castActive = true;
+                              _remotePlaying = true;
+                              _showControls = false;
+                            });
+                          }
+                          if (context.mounted) Navigator.pop(context);
+                        } catch (error, stack) {
+                          debugPrint('[Chromecast] ERRO ao reproduzir: $error');
+                          debugPrint('$stack');
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text(
+                                      'A TV conectou, mas recusou o vídeo: $error')),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  String? get _currentStreamUrl =>
+      _quality == null ? null : _loadedStream?.streams[_quality!];
+  String get _currentStreamTitle => _loadedStream?.title ?? 'Tomato Streaming';
+  EpisodeStream? _loadedStream;
+
+  Future<void> _waitForCastReceiver() async {
+    for (var attempt = 1; attempt <= 30; attempt++) {
+      final state = GoogleCastSessionManager.instance.connectionState;
+      debugPrint(
+        '[Chromecast] aguardando receiver: tentativa=$attempt estado=$state',
+      );
+      if (state == GoogleCastConnectState.connected) {
+        debugPrint('[Chromecast] receiver pronto');
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
+    throw StateError('A TV não concluiu a conexão Cast em 15 segundos.');
+  }
+
+  Future<void> _castPlayPause() async {
+    final remote = GoogleCastRemoteMediaClient.instance;
+    if (_castActive) {
+      final shouldPause = _remotePlaying ||
+          remote.mediaStatus?.playerState == CastMediaPlayerState.playing;
+      if (mounted) setState(() => _remotePlaying = !shouldPause);
+      if (shouldPause) {
+        await remote.pause();
+      } else {
+        await remote.play();
+      }
+      return;
+    }
+    final video = _video;
+    if (video == null) return;
+    video.value.isPlaying ? await video.pause() : await video.play();
+  }
+
+  Future<void> _castSeekRelative(int seconds) async {
+    if (_castActive) {
+      await GoogleCastRemoteMediaClient.instance.seek(
+        GoogleCastMediaSeekOption(
+          position: Duration(seconds: seconds),
+          relative: true,
+        ),
+      );
+      return;
+    }
+    final video = _video;
+    if (video == null) return;
+    final target = video.value.position + Duration(seconds: seconds);
+    await video.seekTo(target.isNegative ? Duration.zero : target);
+  }
+
+  Future<void> _toggleFullscreen() async {
+    setState(() => _fullscreen = !_fullscreen);
+    await SystemChrome.setEnabledSystemUIMode(
+      _fullscreen ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
+    );
+  }
+
+  Future<void> _showVolumeDialog() async {
+    if (!_castActive) return;
+    final remote = GoogleCastRemoteMediaClient.instance;
+    var volume = (remote.mediaStatus?.volume ?? 1).toDouble().clamp(0.0, 1.0);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Volume da TV'),
+          content: Slider(
+            value: volume,
+            min: 0,
+            max: 1,
+            onChanged: (value) {
+              setDialogState(() => volume = value);
+              GoogleCastSessionManager.instance.setDeviceVolume(value);
+            },
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Fechar')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _scheduleControlsHide() {
+    _controlsTimer?.cancel();
+    _controlsTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted && (_video?.value.isPlaying ?? false)) {
+        setState(() => _showControls = false);
+      }
+    });
+  }
+
+  void _toggleControls() {
+    setState(() => _showControls = !_showControls);
+    if (_showControls) _scheduleControlsHide();
   }
 
   @override
@@ -231,12 +397,13 @@ class _PlayerPageState extends State<PlayerPage> {
             return _PlayerError(error: snapshot.error.toString());
           }
           final stream = snapshot.data!;
+          _loadedStream = stream;
           final video = _video;
           if (stream.bestUrl == null) {
             return const _PlayerError(error: TomatoApi.maintenanceMessage);
           }
           return GestureDetector(
-            onTap: () => setState(() => _showControls = !_showControls),
+            onTap: _toggleControls,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -249,17 +416,43 @@ class _PlayerPageState extends State<PlayerPage> {
                         ),
                 ),
                 if (_showControls)
-                  _PlayerOverlay(
-                    stream: stream,
-                    controller: video,
-                    selectedQuality: _quality,
-                    isLandscape: _landscape,
-                    onRotate: _toggleRotation,
-                    onQualitySelected: (quality) =>
-                        _selectQuality(stream, quality),
-                    onNext: stream.nextEpisodeId == null
-                        ? null
-                        : () => _loadNextWithAd(stream.nextEpisodeId!),
+                  StreamBuilder<GoggleCastMediaStatus?>(
+                    stream:
+                        GoogleCastRemoteMediaClient.instance.mediaStatusStream,
+                    builder: (context, statusSnapshot) =>
+                        StreamBuilder<Duration>(
+                      stream: GoogleCastRemoteMediaClient
+                          .instance.playerPositionStream,
+                      builder: (context, positionSnapshot) => _PlayerOverlay(
+                        stream: stream,
+                        controller: video,
+                        selectedQuality: _quality,
+                        isLandscape: _landscape,
+                        onRotate: _toggleRotation,
+                        onCast: _castCurrentVideo,
+                        castActive: _castActive,
+                        remotePlaying: _castActive
+                            ? (statusSnapshot.hasData
+                                ? statusSnapshot.data?.playerState ==
+                                    CastMediaPlayerState.playing
+                                : _remotePlaying)
+                            : false,
+                        remotePosition: positionSnapshot.data,
+                        remoteDuration:
+                            statusSnapshot.data?.mediaInformation?.duration,
+                        remoteVolume:
+                            statusSnapshot.data?.volume.toDouble() ?? 1,
+                        onPlayPause: _castPlayPause,
+                        onSeekRelative: _castSeekRelative,
+                        onFullscreen: _toggleFullscreen,
+                        onVolume: _showVolumeDialog,
+                        onQualitySelected: (quality) =>
+                            _selectQuality(stream, quality),
+                        onNext: stream.nextEpisodeId == null
+                            ? null
+                            : () => _loadNext(stream.nextEpisodeId!),
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -277,6 +470,16 @@ class _PlayerOverlay extends StatelessWidget {
     required this.selectedQuality,
     required this.isLandscape,
     required this.onRotate,
+    required this.onCast,
+    required this.castActive,
+    required this.onPlayPause,
+    required this.onSeekRelative,
+    required this.remotePlaying,
+    required this.remotePosition,
+    required this.remoteDuration,
+    required this.remoteVolume,
+    required this.onFullscreen,
+    required this.onVolume,
     required this.onQualitySelected,
     required this.onNext,
   });
@@ -286,6 +489,16 @@ class _PlayerOverlay extends StatelessWidget {
   final String? selectedQuality;
   final bool isLandscape;
   final VoidCallback onRotate;
+  final VoidCallback onCast;
+  final bool castActive;
+  final VoidCallback onPlayPause;
+  final ValueChanged<int> onSeekRelative;
+  final bool remotePlaying;
+  final Duration? remotePosition;
+  final Duration? remoteDuration;
+  final double remoteVolume;
+  final VoidCallback onFullscreen;
+  final VoidCallback onVolume;
   final ValueChanged<String> onQualitySelected;
   final VoidCallback? onNext;
 
@@ -326,6 +539,28 @@ class _PlayerOverlay extends StatelessWidget {
                   tooltip: isLandscape ? 'Voltar para retrato' : 'Girar tela',
                   onPressed: onRotate,
                   icon: const Icon(LucideIcons.rotateCw),
+                ),
+                IconButton(
+                  tooltip: 'Tela cheia',
+                  onPressed: onFullscreen,
+                  icon: const Icon(LucideIcons.maximize),
+                ),
+                IconButton(
+                  tooltip: castActive ? 'Volume da TV' : 'Volume indisponível',
+                  onPressed: castActive ? onVolume : null,
+                  icon: Icon(
+                    remoteVolume <= 0
+                        ? LucideIcons.volumeX
+                        : LucideIcons.volume2,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Assistir na TV',
+                  onPressed: onCast,
+                  icon: Icon(
+                    LucideIcons.cast,
+                    color: castActive ? AppTheme.primary : null,
+                  ),
                 ),
                 if (stream.streams.length > 1)
                   PopupMenuButton<String>(
@@ -369,12 +604,12 @@ class _PlayerOverlay extends StatelessWidget {
                         // Botão voltar 10 segundos
                         IconButton.filled(
                           style: IconButton.styleFrom(
-                            backgroundColor: Colors.black.withValues(alpha: 0.5),
+                            backgroundColor: Colors.black.withValues(
+                              alpha: 0.5,
+                            ),
                           ),
                           onPressed: () {
-                            final current = video.value.position;
-                            final newPosition = current - const Duration(seconds: 10);
-                            video.seekTo(newPosition.isNegative ? Duration.zero : newPosition);
+                            onSeekRelative(-10);
                           },
                           icon: const Icon(LucideIcons.rewind, size: 20),
                           tooltip: 'Voltar 10s',
@@ -383,12 +618,10 @@ class _PlayerOverlay extends StatelessWidget {
                         // Botão play/pause
                         IconButton.filled(
                           onPressed: () {
-                            video.value.isPlaying
-                                ? video.pause()
-                                : video.play();
+                            onPlayPause();
                           },
                           icon: Icon(
-                            video.value.isPlaying
+                            (castActive ? remotePlaying : video.value.isPlaying)
                                 ? LucideIcons.pause
                                 : LucideIcons.play,
                           ),
@@ -397,28 +630,76 @@ class _PlayerOverlay extends StatelessWidget {
                         // Botão avançar 10 segundos
                         IconButton.filled(
                           style: IconButton.styleFrom(
-                            backgroundColor: Colors.black.withValues(alpha: 0.5),
+                            backgroundColor: Colors.black.withValues(
+                              alpha: 0.5,
+                            ),
                           ),
                           onPressed: () {
-                            final current = video.value.position;
-                            final duration = video.value.duration;
-                            final newPosition = current + const Duration(seconds: 10);
-                            video.seekTo(newPosition > duration ? duration : newPosition);
+                            onSeekRelative(10);
                           },
                           icon: const Icon(LucideIcons.fastForward, size: 20),
                           tooltip: 'Avançar 10s',
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: VideoProgressIndicator(
-                            video,
-                            allowScrubbing: true,
-                            colors: const VideoProgressColors(
-                              playedColor: AppTheme.primary,
-                              bufferedColor: Color(0x66FFFFFF),
-                              backgroundColor: Color(0x33FFFFFF),
-                            ),
-                          ),
+                          child: castActive && remoteDuration != null
+                              ? Column(
+                                  children: [
+                                    Slider(
+                                      value: (remotePosition ?? Duration.zero)
+                                          .inMilliseconds
+                                          .clamp(
+                                              0, remoteDuration!.inMilliseconds)
+                                          .toDouble(),
+                                      min: 0,
+                                      max: remoteDuration!.inMilliseconds
+                                          .toDouble(),
+                                      onChanged: (value) {
+                                        GoogleCastRemoteMediaClient.instance
+                                            .seek(
+                                          GoogleCastMediaSeekOption(
+                                            position: Duration(
+                                                milliseconds: value.round()),
+                                          ),
+                                        );
+                                      },
+                                      activeColor: AppTheme.primary,
+                                      inactiveColor: Colors.white24,
+                                    ),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Text(
+                                        '${_formatDuration(remotePosition ?? Duration.zero)} / ${_formatDuration(remoteDuration!)}',
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.white70),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Column(
+                                  children: [
+                                    VideoProgressIndicator(
+                                      video,
+                                      allowScrubbing: true,
+                                      colors: const VideoProgressColors(
+                                        playedColor: AppTheme.primary,
+                                        bufferedColor: Color(0x66FFFFFF),
+                                        backgroundColor: Color(0x33FFFFFF),
+                                      ),
+                                    ),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Text(
+                                        '${_formatDuration(video.value.position)} / ${_formatDuration(video.value.duration)}',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ],
                     ),
@@ -479,6 +760,13 @@ class _PlayerError extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatDuration(Duration value) {
+  final hours = value.inHours;
+  final minutes = value.inMinutes.remainder(60).toString().padLeft(2, '0');
+  final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
+  return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
 }
 
 String? _bestQuality(EpisodeStream stream) {
