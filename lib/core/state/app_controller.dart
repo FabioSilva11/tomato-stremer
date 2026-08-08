@@ -42,7 +42,7 @@ class AppController extends ChangeNotifier {
         0;
     final next = current + 1;
     await _database.saveMeta(_appEntryCountKey, '$next');
-    return next % 10 == 0;
+    return current == 0 || next % 10 == 0;
   }
 
   Future<void> initialize() async {

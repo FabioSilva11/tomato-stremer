@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_chrome_cast/cast_context.dart';
 import 'package:flutter_chrome_cast/discovery.dart';
 import 'package:flutter_chrome_cast/entities.dart';
@@ -17,6 +19,8 @@ import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  await FirebaseAnalytics.instance.logAppOpen();
 
   GoogleCastContext.instance.setSharedInstanceWithOptions(
     GoogleCastOptionsAndroid(

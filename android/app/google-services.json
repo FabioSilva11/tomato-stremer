@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "858377497912",
+    "project_id": "tomato-3423c",
+    "storage_bucket": "tomato-3423c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:858377497912:android:890eedf5f55a1e9ffaa5cd",
+        "android_client_info": {
+          "package_name": "com.tomato.streaming.tomato_streaming"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB5Iq_r8MGK91tx9V8ESyZeCPjL2iz_Qqw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

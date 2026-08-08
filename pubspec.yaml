@@ -28,6 +28,8 @@ dependencies:
   # Notificações
   flutter_local_notifications: ^18.0.1
   workmanager: ^0.9.0
+  firebase_core: ^4.13.0
+  firebase_analytics: ^12.4.6
 
 dev_dependencies:
   flutter_test:

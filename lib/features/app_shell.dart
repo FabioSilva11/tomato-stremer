@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -30,8 +31,14 @@ class _AppShellState extends State<AppShell> {
 
   Future<void> _maybeShowTelegramInvite() async {
     if (!mounted) return;
-    final shouldShow = await context.read<AppController>().registerAppEntry();
+    final controller = context.read<AppController>();
+    final shouldShow = await controller.registerAppEntry();
     if (!shouldShow || !mounted) return;
+    await FirebaseAnalytics.instance.logEvent(
+      name: 'telegram_invite_shown',
+      parameters: const {'group': 'sketchware_ia'},
+    );
+    if (!mounted) return;
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -41,7 +48,13 @@ class _AppShellState extends State<AppShell> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              FirebaseAnalytics.instance.logEvent(
+                name: 'telegram_invite_cancel',
+                parameters: const {'group': 'sketchware_ia'},
+              );
+              Navigator.of(context).pop();
+            },
             child: const Text('Cancelar'),
           ),
           FilledButton(
@@ -49,6 +62,13 @@ class _AppShellState extends State<AppShell> {
               final opened = await launchUrl(
                 _telegramGroupUri,
                 mode: LaunchMode.externalApplication,
+              );
+              await FirebaseAnalytics.instance.logEvent(
+                name: 'telegram_invite_join',
+                parameters: <String, Object>{
+                  'group': 'sketchware_ia',
+                  'opened': opened,
+                },
               );
               if (context.mounted) Navigator.of(context).pop();
               if (!opened && mounted) {
