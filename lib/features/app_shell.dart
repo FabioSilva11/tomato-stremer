@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/state/app_controller.dart';
 import 'home/home_page.dart';
@@ -18,6 +19,51 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _index = 0;
+  static final _telegramGroupUri = Uri.parse('https://t.me/sketcware_ia');
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _maybeShowTelegramInvite());
+  }
+
+  Future<void> _maybeShowTelegramInvite() async {
+    if (!mounted) return;
+    final shouldShow = await context.read<AppController>().registerAppEntry();
+    if (!shouldShow || !mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Entre no nosso grupo'),
+        content: const Text(
+          'Faça parte do grupo Sketchware IA no Telegram e acompanhe novidades, dicas e atualizações.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final opened = await launchUrl(
+                _telegramGroupUri,
+                mode: LaunchMode.externalApplication,
+              );
+              if (context.mounted) Navigator.of(context).pop();
+              if (!opened && mounted) {
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Não foi possível abrir o Telegram.')),
+                );
+              }
+            },
+            child: const Text('Entrar no grupo'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

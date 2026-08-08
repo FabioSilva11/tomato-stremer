@@ -23,6 +23,7 @@ class AppController extends ChangeNotifier {
   List<WatchHistoryEntry> history = const [];
   List<EpisodeNotification> notifications = const [];
   int lastNewEpisodeCount = 0;
+  static const String _appEntryCountKey = 'app_entry_count';
 
   int get unreadNotifications =>
       notifications.where((item) => item.unread).length;
@@ -33,6 +34,16 @@ class AppController extends ChangeNotifier {
   Map<int, WatchHistoryEntry> get historyByEpisode => {
         for (final entry in history) entry.episodeId: entry,
       };
+
+  Future<bool> registerAppEntry() async {
+    final current = int.tryParse(
+          await _database.loadMeta(_appEntryCountKey) ?? '',
+        ) ??
+        0;
+    final next = current + 1;
+    await _database.saveMeta(_appEntryCountKey, '$next');
+    return next % 10 == 0;
+  }
 
   Future<void> initialize() async {
     await loadLibrary();
